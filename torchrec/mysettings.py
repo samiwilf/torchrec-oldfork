@@ -3,9 +3,10 @@
 
 LOG_PATH = "/home/ubuntu/repos/torchrec-fork/examples/dlrm/"
 SETTING = 1
-print(f"***********************************")
-print(f"     RUNNING SETTING {SETTING}     ")
-print(f"***********************************")
+print('*'.center(60, '*'))
+print(f"  RUNNING SETTING {SETTING}  ".center(60, '*'))
+print('*'.center(60, '*'))
+
 if SETTING == 1:
     LOG_FILE = "s1_losses_simplestNN.txt"    
     INT_FEATURE_COUNT = 1
