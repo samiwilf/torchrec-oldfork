@@ -21,6 +21,15 @@ from typing import (
     Set,
 )
 
+from torchrec.mysettings import (
+    ARGV,
+    INT_FEATURE_COUNT,
+    CAT_FEATURE_COUNT,
+    DAYS,
+    SETTING,
+    LOG_FILE,
+)
+
 import torch
 from torch.autograd.profiler import record_function
 from torch.distributed.fsdp import FullyShardedDataParallel
@@ -134,7 +143,7 @@ class TrainPipelineBase(TrainPipeline[In, Out]):
 
         if self._model.training:
             #self.losseslog.write([str(x) for x in losses.detach().cpu().numpy().tolist()])
-            self.losseslog = open("Losses1.txt", "a")
+            self.losseslog = open(LOG_FILE, "a")
             line = str(losses.detach().cpu().numpy().tolist()) + "\n"
             self.losseslog.write(line)
             self.losseslog.close()
@@ -525,7 +534,7 @@ class TrainPipelineSparseDist(TrainPipeline[In, Out]):
 
         if self._model.training:
             #print(losses.detach().cpu().numpy())
-            self.losseslog = open("/home/ubuntu/repos/torchrec/examples/dlrm/Losses_day_0_single_sample_.txt", "a")
+            self.losseslog = open(LOG_FILE, "a")
             line = str(losses.detach().cpu().numpy().tolist()) + "\n"
             self.losseslog.write(line)
             self.losseslog.close()

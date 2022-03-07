@@ -13,6 +13,15 @@ from torchrec.datasets.utils import Batch
 from torchrec.models.dlrm import DLRM
 from torchrec.modules.embedding_modules import EmbeddingBagCollection
 
+from torchrec.mysettings import (
+    ARGV,
+    INT_FEATURE_COUNT,
+    CAT_FEATURE_COUNT,
+    DAYS,
+    SETTING,
+    LOG_FILE,
+)
+
 import sqlite3
 import struct
 import numpy as np

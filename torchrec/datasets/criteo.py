@@ -19,6 +19,16 @@ from typing import (
     Tuple,
 )
 
+import torchrec.mysettings as mysettings
+from torchrec.mysettings import (
+    ARGV,
+    INT_FEATURE_COUNT,
+    CAT_FEATURE_COUNT,
+    DAYS,
+    SETTING,
+    LOG_FILE,
+)
+
 import numpy as np
 import torch
 import torch.utils.data.datapipes as dp
@@ -35,11 +45,11 @@ from torchrec.datasets.utils import (
 from torchrec.sparse.jagged_tensor import KeyedJaggedTensor
 
 FREQUENCY_THRESHOLD = 3
-INT_FEATURE_COUNT = 13 #1 #13
-CAT_FEATURE_COUNT = 26 #2
+INT_FEATURE_COUNT = mysettings.INT_FEATURE_COUNT 
+CAT_FEATURE_COUNT = mysettings.CAT_FEATURE_COUNT 
 #INT_FEATURE_COUNT = 13
 #CAT_FEATURE_COUNT = 26
-DAYS = 1#24
+DAYS = mysettings.DAYS #1#24
 DEFAULT_LABEL_NAME = "label"
 DEFAULT_INT_NAMES: List[str] = [f"int_{idx}" for idx in range(INT_FEATURE_COUNT)]
 DEFAULT_CAT_NAMES: List[str] = [f"cat_{idx}" for idx in range(CAT_FEATURE_COUNT)]
@@ -672,8 +682,13 @@ class BinaryCriteoUtils:
             offset = start_row * row_size * dtype.itemsize
             fin.seek(offset, os.SEEK_CUR)
             num_entries = num_rows * row_size
-            if False:
-                if True: #'_int' in fname or '_cat' in fname:
+            if SETTING == 1:                
+                if '_cat' in fname:
+                    data = np.zeros((1000,1)).astype(np.float32)
+                else:
+                    data = np.ones((1000,1)).astype(np.float32)
+                num_rows, row_size = 1000, 1
+                if False: #'_int' in fname or '_cat' in fname:
                     data1 = np.ones((50,1)).astype(np.float32)
                     #BinaryCriteoUtils.load_npy_range.counter = getattr(BinaryCriteoUtils.load_npy_range, 'counter', 0) + 1
                     #if BinaryCriteoUtils.load_npy_range.counter % 2 == 1:
@@ -695,7 +710,7 @@ class BinaryCriteoUtils:
                 #    num_rows, row_size = 1, 1
                 #data = np.array([1]).astype(np.float32)[:, np.newaxis]
                 #num_rows, row_size = 1, 1                
-            else:
+            if SETTING == 4:
                 data = np.fromfile(fin, dtype=dtype, count=num_entries)
                 if dtype == np.float64:
                     data = data.astype(np.float32)
@@ -1456,7 +1471,9 @@ class InMemoryBinaryCriteoIterDataPipe(IterableDataset):
                 slice_ = slice(row_idx, row_idx + rows_to_get) #
 
                 #for simple nn test:
-                slice_ = slice(0, 2048)
+                #slice_ = slice(0, 2048)
+                if SETTING == 1:
+                    slice_ = slice(0, 1)
 
                 #print("slice: ", row_idx/2048)
                 #slice_ = slice(0, 2048)
@@ -1471,7 +1488,8 @@ class InMemoryBinaryCriteoIterDataPipe(IterableDataset):
                 row_idx += rows_to_get
 
                 if row_idx >= self.num_rows_per_file[file_idx]:
-                    #file_idx += 1
+                    if SETTING == 4:
+                        file_idx += 1
                     row_idx = 0
 
     def __len__(self) -> int:
