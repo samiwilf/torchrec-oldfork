@@ -25,29 +25,29 @@ STAGES = ["train", "val", "test"]
 
 def _get_random_dataloader(
     args: argparse.Namespace,
+    pin_memory: bool,
 ) -> DataLoader:
     return DataLoader(
         RandomRecDataset(
             keys=DEFAULT_CAT_NAMES,
             batch_size=args.batch_size,
             hash_size=args.num_embeddings,
-            hash_sizes=args.num_embeddings_per_feature
-            if hasattr(args, "num_embeddings_per_feature")
-            else None,
-            manual_seed=args.seed if hasattr(args, "seed") else None,
+            hash_sizes=args.num_embeddings_per_feature,
+            manual_seed=args.seed,
             ids_per_feature=1,
             num_dense=len(DEFAULT_INT_NAMES),
         ),
         batch_size=None,
         batch_sampler=None,
-        pin_memory=args.pin_memory,
-        num_workers=args.num_workers if hasattr(args, "num_workers") else 0,
+        pin_memory=pin_memory,
+        num_workers=args.num_workers,
     )
 
 
 def _get_in_memory_dataloader(
     args: argparse.Namespace,
     stage: str,
+    pin_memory: bool,
 ) -> DataLoader:
     files = os.listdir(args.in_memory_binary_criteo_path)
 
@@ -77,10 +77,13 @@ def _get_in_memory_dataloader(
                 filter(lambda s: kind in s, files),
             )
         )
-        for kind in ["dense", "sparse", "labels"]
+        #for kind in ["dense", "sparse", "labels"]
+        #for kind in ["_0_dense", "_0_sparse", "_0_labels"]
+        for kind in ["_0_reordered_int", "_0_reordered_cat", "_0_reordered_y"]
+        #for kind in ["_reordered_int", "_reordered_cat", "_reordered_y"]
     ]
-    dataloader = DataLoader(
-        InMemoryBinaryCriteoIterDataPipe(
+
+    obj = InMemoryBinaryCriteoIterDataPipe(
             *stage_files,  # pyre-ignore[6]
             batch_size=args.batch_size,
             rank=rank,
@@ -89,9 +92,12 @@ def _get_in_memory_dataloader(
             hashes=args.num_embeddings_per_feature
             if args.num_embeddings is None
             else ([args.num_embeddings] * CAT_FEATURE_COUNT),
-        ),
+        )
+
+    dataloader = DataLoader(
+        obj,
         batch_size=None,
-        pin_memory=args.pin_memory,
+        pin_memory=pin_memory,
         collate_fn=lambda x: x,
     )
     return dataloader
@@ -117,14 +123,9 @@ def get_dataloader(args: argparse.Namespace, backend: str, stage: str) -> DataLo
     if stage not in STAGES:
         raise ValueError(f"Supplied stage was {stage}. Must be one of {STAGES}.")
 
-    args.pin_memory = (
-        (backend == "nccl") if not hasattr(args, "pin_memory") else args.pin_memory
-    )
+    pin_memory = (backend == "nccl") if args.pin_memory is None else args.pin_memory
 
-    if (
-        not hasattr(args, "in_memory_binary_criteo_path")
-        or args.in_memory_binary_criteo_path is None
-    ):
-        return _get_random_dataloader(args)
+    if args.in_memory_binary_criteo_path is None:
+        return _get_random_dataloader(args, pin_memory)
     else:
-        return _get_in_memory_dataloader(args, stage)
+        return _get_in_memory_dataloader(args, stage, pin_memory)

@@ -23,7 +23,9 @@ from typing import (
 
 import torch
 from torch.autograd.profiler import record_function
+from torch.distributed.fsdp import FullyShardedDataParallel
 from torch.fx.node import Node
+from torch.nn.parallel import DistributedDataParallel
 from torchrec.distributed.model_parallel import DistributedModelParallel, ShardedModule
 from torchrec.distributed.types import Awaitable, ShardedModuleContext
 from torchrec.streamable import Pipelineable, Multistreamable
@@ -90,7 +92,7 @@ class TrainPipelineBase(TrainPipeline[In, Out]):
             torch.cuda.Stream() if device.type == "cuda" else None
         )
         self._cur_batch: Optional[In] = None
-        self._connected = False
+        self._connected = False        
 
     def _connect(self, dataloader_iter: Iterator[In]) -> None:
         cur_batch = next(dataloader_iter)
@@ -131,6 +133,11 @@ class TrainPipelineBase(TrainPipeline[In, Out]):
             (losses, output) = self._model(cur_batch)
 
         if self._model.training:
+            #self.losseslog.write([str(x) for x in losses.detach().cpu().numpy().tolist()])
+            self.losseslog = open("Losses1.txt", "a")
+            line = str(losses.detach().cpu().numpy().tolist()) + "\n"
+            self.losseslog.write(line)
+            self.losseslog.close()
             with record_function("## backward ##"):
                 torch.sum(losses, dim=0).backward()
 
@@ -363,7 +370,11 @@ def _rewrite_model(  # noqa C901
 ) -> List[ShardedModule]:
 
     # Get underlying nn.Module
-    if isinstance(model, DistributedModelParallel):
+    while (
+        isinstance(model, DistributedModelParallel)
+        or isinstance(model, DistributedDataParallel)
+        or isinstance(model, FullyShardedDataParallel)
+    ):
         model = model.module
 
     # Collect a list of sharded modules.
@@ -513,6 +524,11 @@ class TrainPipelineSparseDist(TrainPipeline[In, Out]):
                 _start_data_dist(self._pipelined_modules, batch_ip1, self._context)
 
         if self._model.training:
+            #print(losses.detach().cpu().numpy())
+            self.losseslog = open("/home/ubuntu/repos/torchrec/examples/dlrm/Losses_day_0_single_sample_.txt", "a")
+            line = str(losses.detach().cpu().numpy().tolist()) + "\n"
+            self.losseslog.write(line)
+            self.losseslog.close()
             # Backward
             with record_function("## backward ##"):
                 torch.sum(losses, dim=0).backward()

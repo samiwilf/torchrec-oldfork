@@ -52,7 +52,7 @@ TRAIN_PIPELINE_STAGES = 3  # Number of stages in TrainPipelineSparseDist.
 
 
 def parse_args(argv: List[str]) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="torchrec dlrm example trainer")
+    parser = argparse.ArgumentParser(description="torchrec + lightning app")
     parser.add_argument(
         "--epochs", type=int, default=1, help="number of epochs to train"
     )
@@ -190,7 +190,10 @@ def _evaluate(
         None.
     """
     model = train_pipeline._model
-    model.eval()
+    #################
+    #################
+    #################
+    #model.eval()
     device = train_pipeline._device
     limit_batches = (
         args.limit_val_batches if stage == "val" else args.limit_test_batches
@@ -213,9 +216,10 @@ def _evaluate(
     accuracy = metrics.Accuracy(compute_on_step=False).to(device)
 
     # Infinite iterator instead of while-loop to leverage tqdm progress bar.
-    for _ in tqdm(iter(int, 1), desc=f"Evaluating {stage} set"):
+    for _ in tqdm(iter(int, 1), desc=f"Evaluating {stage} set", disable=False):
         try:
             _loss, logits, labels = train_pipeline.progress(combined_iterator)
+            #labels = labels.int()
             auroc(logits, labels)
             accuracy(logits, labels)
         except StopIteration:
@@ -309,6 +313,7 @@ def train_val_test(
     for epoch in range(args.epochs):
         val_iterator = iter(val_dataloader)
         _train(args, train_pipeline, train_iterator, val_iterator, epoch)
+        #_train(args, train_pipeline, val_iterator, val_iterator, epoch)
         train_iterator = iter(train_dataloader)
         val_next_iterator = (
             test_iterator if epoch == args.epochs - 1 else train_iterator
@@ -334,6 +339,28 @@ def main(argv: List[str]) -> None:
     Returns:
         None.
     """
+
+    # simplest NN test
+    #argv = ['--pin_memory', '--batch_size', '1', '--epochs', '1', '--num_embeddings_per_feature', '1', '--embedding_dim', '4', '--dense_arch_layer_sizes', '4', '--over_arch_layer_sizes', '1,1', '--in_memory_binary_criteo_path', '/home/ubuntu/mountpoint/criteo_terabyte_subsample0.0_maxind40M', '--learning_rate', '1.0']
+
+    # simplest 2 GPU NN test
+    #argv = ['--pin_memory', '--batch_size', '2', '--epochs', '1', '--num_embeddings_per_feature', '1,1', '--embedding_dim', '4', '--dense_arch_layer_sizes', '4', '--over_arch_layer_sizes', '1,1', '--in_memory_binary_criteo_path', '/home/ubuntu/mountpoint/criteo_terabyte_subsample0.0_maxind40M', '--learning_rate', '1.0']
+
+    # real embedding sizes, but fake data and small mlp layers.
+    #argv = ['--pin_memory', '--batch_size', '2048', '--epochs', '1', '--num_embeddings_per_feature', '45833188,36746,17245,7413,20243,3,7114,1441,62,29275261,1572176,345138,10,2209,11267,128,4,974,14,48937457,11316796,40094537,452104,12606,104,35', '--embedding_dim', '128', '--dense_arch_layer_sizes', '128', '--over_arch_layer_sizes', '1,1', '--in_memory_binary_criteo_path', '/home/ubuntu/mountpoint/criteo_terabyte_subsample0.0_maxind40M', '--learning_rate', '0.01']
+
+    # real run except limiting test, val, and train batches
+    #argv = ['--seed','1','--limit_test_batches', '1', '--limit_val_batches', '1', '--limit_train_batches', '5', '--pin_memory', '--batch_size', '2048', '--epochs', '1', '--num_embeddings_per_feature', '45833188,36746,17245,7413,20243,3,7114,1441,62,29275261,1572176,345138,10,2209,11267,128,4,974,14,48937457,11316796,40094537,452104,12606,104,35', '--embedding_dim', '128', '--dense_arch_layer_sizes', '512,256,128', '--over_arch_layer_sizes', '1024,1024,512,256,1', '--in_memory_binary_criteo_path', '/home/ubuntu/mountpoint/criteo_terabyte_subsample0.0_maxind40M', '--learning_rate', '1.0']
+    
+    # real run
+    argv = ['--pin_memory', '--batch_size', '2048', '--epochs', '1', '--num_embeddings_per_feature', '45833188,36746,17245,7413,20243,3,7114,1441,62,29275261,1572176,345138,10,2209,11267,128,4,974,14,48937457,11316796,40094537,452104,12606,104,35', '--embedding_dim', '128', '--dense_arch_layer_sizes', '512,256,128', '--over_arch_layer_sizes', '1024,1024,512,256,1', '--in_memory_binary_criteo_path', '/home/ubuntu/mountpoint/criteo_terabyte_subsample0.0_maxind40M', '--learning_rate', '1.0']
+    
+    # modify embedding tables to be 1 vector per table.
+    #argv = ['--pin_memory', '--batch_size', '2048', '--epochs', '1', '--num_embeddings_per_feature', '1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1', '--embedding_dim', '128', '--dense_arch_layer_sizes', '512,256,128', '--over_arch_layer_sizes', '1024,1024,512,256,1', '--in_memory_binary_criteo_path', '/home/ubuntu/mountpoint/criteo_terabyte_subsample0.0_maxind40M', '--learning_rate', '1.0']
+
+    # real run, but using Shabab's 1tb_numpy data
+    #argv = ['--pin_memory', '--batch_size', '2048', '--epochs', '1', '--num_embeddings_per_feature', '45833188,36746,17245,7413,20243,3,7114,1441,62,29275261,1572176,345138,10,2209,11267,128,4,974,14,48937457,11316796,40094537,452104,12606,104,35', '--embedding_dim', '128', '--dense_arch_layer_sizes', '512,256,128', '--over_arch_layer_sizes', '1024,1024,512,256,1', '--in_memory_binary_criteo_path', '/home/ubuntu/mountpoint/criteo/1tb_numpy/', '--learning_rate', '1.0']
+
     args = parse_args(argv)
 
     rank = int(os.environ["LOCAL_RANK"])

@@ -5,7 +5,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import List, Optional, Dict
+from typing import List, Optional
 
 import torch
 from torch import nn
@@ -66,52 +66,25 @@ class SparseArch(nn.Module):
            offsets=torch.tensor([0, 2, 2, 3, 4, 5, 8]),
         )
 
-        sparse_embeddings = sparse_arch(features)
+        sparse_embedded = sparse_arch(features)
     """
 
     def __init__(self, embedding_bag_collection: EmbeddingBagCollection) -> None:
         super().__init__()
         self.embedding_bag_collection: EmbeddingBagCollection = embedding_bag_collection
-        assert (
-            self.embedding_bag_collection.embedding_bag_configs
-        ), "Embedding bag collection cannot be empty!"
-        self.D: int = self.embedding_bag_collection.embedding_bag_configs[
-            0
-        ].embedding_dim
-        self._sparse_feature_names: List[str] = [
-            name
-            for conf in embedding_bag_collection.embedding_bag_configs
-            for name in conf.feature_names
-        ]
-
-        self.F: int = len(self._sparse_feature_names)
 
     def forward(
         self,
         features: KeyedJaggedTensor,
-    ) -> torch.Tensor:
+    ) -> KeyedTensor:
         """
         Args:
             features (KeyedJaggedTensor): an input tensor of sparse features.
 
         Returns:
-            torch.Tensor of shape B X F X D
+            KeyedTensor: an output tensor of size F * D X B.
         """
-
-        sparse_features: KeyedTensor = self.embedding_bag_collection(features)
-
-        B: int = features.stride()
-
-        sparse: Dict[str, torch.Tensor] = sparse_features.to_dict()
-        sparse_values: List[torch.Tensor] = []
-        for name in self.sparse_feature_names:
-            sparse_values.append(sparse[name])
-
-        return torch.cat(sparse_values, dim=1).reshape(B, self.F, self.D)
-
-    @property
-    def sparse_feature_names(self) -> List[str]:
-        return self._sparse_feature_names
+        return self.embedding_bag_collection(features)
 
 
 class DenseArch(nn.Module):
@@ -167,7 +140,7 @@ class InteractionArch(nn.Module):
 
 
     Args:
-        num_sparse_features : int = F
+        sparse_feature_names (List[str]): size F
 
     Example::
 
@@ -175,29 +148,35 @@ class InteractionArch(nn.Module):
         B = 10
         keys = ["f1", "f2"]
         F = len(keys)
-        inter_arch = InteractionArch(num_sparse_features=len(keys))
+        inter_arch = InteractionArch(sparse_feature_names=keys)
 
         dense_features = torch.rand((B, D))
-        sparse_features = torch.rand((B, F, D))
+
+        sparse_features = KeyedTensor(
+           keys=keys,
+           length_per_key=[D, D],
+           values=torch.rand((B, D * F)),
+        )
 
         #  B X (D + F + F choose 2)
         concat_dense = inter_arch(dense_features, sparse_features)
     """
 
-    def __init__(self, num_sparse_features: int) -> None:
+    def __init__(self, sparse_feature_names: List[str]) -> None:
         super().__init__()
-        self.F: int = num_sparse_features
+        self.F: int = len(sparse_feature_names)
         self.triu_indices: torch.Tensor = torch.triu_indices(
             self.F + 1, self.F + 1, offset=1
         )
+        self.sparse_feature_names = sparse_feature_names
 
     def forward(
-        self, dense_features: torch.Tensor, sparse_features: torch.Tensor
+        self, dense_features: torch.Tensor, sparse_features: KeyedTensor
     ) -> torch.Tensor:
         """
         Args:
             dense_features (torch.Tensor): an input tensor of size B X D.
-            sparse_features (torch.Tensor): an input tensor of size B X F X D
+            sparse_features (KeyedJaggedTensor): an input tensor of size F * D X B.
 
         Returns:
             torch.Tensor: an output tensor of size B X (D + F + F choose 2).
@@ -206,9 +185,13 @@ class InteractionArch(nn.Module):
             return dense_features
         (B, D) = dense_features.shape
 
-        combined_values = torch.cat(
-            (dense_features.unsqueeze(1), sparse_features), dim=1
-        )
+        sparse = sparse_features.to_dict()
+        sparse_values = []
+        for name in self.sparse_feature_names:
+            sparse_values.append(sparse[name])
+
+        sparse_values = torch.cat(sparse_values, dim=1).reshape(B, self.F, D)
+        combined_values = torch.cat((dense_features.unsqueeze(1), sparse_values), dim=1)
 
         # dense/sparse + sparse/sparse interaction
         # size B X (F + F choose 2)
@@ -246,6 +229,24 @@ class OverArch(nn.Module):
         super().__init__()
         if len(layer_sizes) <= 1:
             raise ValueError("OverArch must have multiple layers.")
+
+        n = layer_sizes[-2]
+        m = layer_sizes[-1]
+        LL = nn.Linear(int(n), int(m), bias=True, device=device)
+        import numpy as np
+        np.random.seed(0)
+        mean = 0.0  # std_dev = np.sqrt(variance)
+        std_dev = np.sqrt(2 / (m + n))  # np.sqrt(1 / m) # np.sqrt(1 / n)
+        W = np.random.normal(mean, std_dev, size=(m, n)).astype(np.float32)
+        std_dev = np.sqrt(1 / m)  # np.sqrt(2 / (m + 1))
+        bt = np.random.normal(mean, std_dev, size=m).astype(np.float32)
+        #LL.weight.data = torch.tensor(W,device=device)
+        LL.weight.data.copy_(torch.tensor(W))
+        LL.weight.requires_grad = True
+        #LL.bias.data = torch.tensor(bt,device=device)
+        LL.bias.data.copy_(torch.tensor(bt))
+        LL.bias.requires_grad = True        
+
         self.model: nn.Module = nn.Sequential(
             MLP(
                 in_features,
@@ -254,7 +255,8 @@ class OverArch(nn.Module):
                 activation="relu",
                 device=device,
             ),
-            nn.Linear(layer_sizes[-2], layer_sizes[-1], bias=True, device=device),
+            LL,
+            #nn.Linear(layer_sizes[-2], layer_sizes[-1], bias=True, device=device),
         )
 
     def forward(self, features: torch.Tensor) -> torch.Tensor:
@@ -366,19 +368,24 @@ class DLRM(nn.Module):
                 "arch layer size ({dense_arch_layer_sizes[-1]}) must match."
             )
 
-        self.sparse_arch: SparseArch = SparseArch(embedding_bag_collection)
-        num_sparse_features: int = len(self.sparse_arch.sparse_feature_names)
+        feature_names = [
+            name
+            for conf in embedding_bag_collection.embedding_bag_configs
+            for name in conf.feature_names
+        ]
+        num_feature_names = len(feature_names)
 
+        over_in_features = (
+            embedding_dim + choose(num_feature_names, 2) + num_feature_names
+        )
+
+        self.sparse_arch = SparseArch(embedding_bag_collection)
         self.dense_arch = DenseArch(
             in_features=dense_in_features,
             layer_sizes=dense_arch_layer_sizes,
             device=dense_device,
         )
-        self.inter_arch = InteractionArch(num_sparse_features=num_sparse_features)
-
-        over_in_features: int = (
-            embedding_dim + choose(num_sparse_features, 2) + num_sparse_features
-        )
+        self.inter_arch = InteractionArch(sparse_feature_names=feature_names)
         self.over_arch = OverArch(
             in_features=over_in_features,
             layer_sizes=over_arch_layer_sizes,

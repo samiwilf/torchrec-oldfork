@@ -35,9 +35,11 @@ from torchrec.datasets.utils import (
 from torchrec.sparse.jagged_tensor import KeyedJaggedTensor
 
 FREQUENCY_THRESHOLD = 3
-INT_FEATURE_COUNT = 13
-CAT_FEATURE_COUNT = 26
-DAYS = 24
+INT_FEATURE_COUNT = 13 #1 #13
+CAT_FEATURE_COUNT = 26 #2
+#INT_FEATURE_COUNT = 13
+#CAT_FEATURE_COUNT = 26
+DAYS = 1#24
 DEFAULT_LABEL_NAME = "label"
 DEFAULT_INT_NAMES: List[str] = [f"int_{idx}" for idx in range(INT_FEATURE_COUNT)]
 DEFAULT_CAT_NAMES: List[str] = [f"cat_{idx}" for idx in range(CAT_FEATURE_COUNT)]
@@ -61,7 +63,281 @@ def _default_row_mapper(example: List[str]) -> Dict[str, Union[int, str]]:
         next(column_names): next(column_type_casters)(val) for val in reversed(example)
     }
 
+# From OSS
+import math
+import sys
+import pathlib
+import os
+from os import path
+class DataLoader:
+    """
+    DataLoader dedicated for the Criteo Terabyte Click Logs dataset
+    """
 
+    def __init__(
+            self,
+            rank,
+            world_size,
+            data_filename,
+            data_directory,
+            days,
+            batch_size,
+            max_ind_range=-1,
+            split="train",
+            drop_last_batch=False
+    ):
+        self.data_filename = data_filename
+        self.data_directory = data_directory
+        self.days = days
+        self.batch_size = batch_size
+        self.max_ind_range = max_ind_range
+
+        total_file = os.path.join(
+            data_directory,
+            data_filename + "_day_count.npz"
+        )
+
+        with np.load(total_file) as data:
+            total_per_file = data["total_per_file"][np.array(days)]
+        self.total_per_file = total_per_file
+
+        self.length = sum(total_per_file)
+        #if split == "test" or split == "val":
+        #    self.length = int(np.ceil(self.length / 2.))
+        self.split = split
+        self.drop_last_batch = drop_last_batch
+
+        # compute offsets per file
+        self.offset_per_file = np.array([0] + [x for x in total_per_file])
+        for i, d in enumerate(days):
+            self.offset_per_file[i + 1] += self.offset_per_file[i]
+
+        self.rank = rank
+        self.rows_per_rank = self.length // world_size
+        self.start_row = rank * self.rows_per_rank
+        self.last_row = self.start_row + self.rows_per_rank - 1
+
+    def __iter__(self):
+        return iter(
+            self.__batch_generator(
+                self.data_filename, self.data_directory, self.days,
+                self.batch_size, self.split, self.drop_last_batch, self.max_ind_range
+            )
+        )
+
+    def __len__(self):
+        if self.drop_last_batch:
+            return self.length // self.batch_size
+        else:
+            return math.ceil(self.length / self.batch_size)
+    #From OSS
+    def __transform_features(self,
+            x_int_batch, x_cat_batch, y_batch, max_ind_range, flag_input_torch_tensor=False
+    ):
+        if max_ind_range > 0:
+            x_cat_batch = x_cat_batch % max_ind_range
+
+        if flag_input_torch_tensor:
+            x_int_batch = torch.log(x_int_batch.clone().detach().type(torch.float) + 1)
+            x_cat_batch = x_cat_batch.clone().detach().type(torch.long)
+            y_batch = y_batch.clone().detach().type(torch.float32).view(-1, 1)
+        else:
+            x_int_batch = torch.log(torch.tensor(x_int_batch, dtype=torch.float) + 1)
+            x_cat_batch = torch.tensor(x_cat_batch, dtype=torch.long)
+            y_batch = torch.tensor(y_batch, dtype=torch.float32).view(-1, 1)
+
+        batch_size = x_cat_batch.shape[0]
+        feature_count = x_cat_batch.shape[1]
+        lS_o = torch.arange(batch_size).reshape(1, -1).repeat(feature_count, 1)
+
+        return x_int_batch, lS_o, x_cat_batch.t(), y_batch.view(-1, 1)
+    # From OSS
+    def __batch_generator(
+            self, data_filename, data_directory, days, batch_size, split, drop_last, max_ind_range
+    ):
+        previous_file = None
+        for day in days:
+            filepath = os.path.join(
+                data_directory,
+                data_filename + "_{}_reordered.npz".format(day)
+            )
+
+            print('Loading file: ', filepath)
+            print(f"Rank {self.rank} Reading day {filepath[:-4]+'***.npy'}")
+            x_int = np.load(str(filepath)[:-4] + "_int.npy")
+            x_cat = np.load(str(filepath)[:-4] + "_cat.npy")                
+            y = np.load(str(filepath)[:-4] + "_cat.npy")
+
+            samples_in_file = y.shape[0]
+            batch_start_idx = 0
+            if split == "test" or split == "val":
+                length = int(np.ceil(samples_in_file / 2.))
+                if split == "test":
+                    samples_in_file = length
+                elif split == "val":
+                    batch_start_idx = samples_in_file - length
+
+            while batch_start_idx < samples_in_file - batch_size:
+
+                missing_samples = batch_size
+                if previous_file is not None:
+                    missing_samples -= previous_file['y'].shape[0]
+
+                current_slice = slice(batch_start_idx, batch_start_idx + missing_samples)
+
+                x_int_batch = x_int[current_slice]
+                x_cat_batch = x_cat[current_slice]
+                y_batch = y[current_slice]
+
+                if previous_file is not None:
+                    x_int_batch = np.concatenate(
+                        [previous_file['x_int'], x_int_batch],
+                        axis=0
+                    )
+                    x_cat_batch = np.concatenate(
+                        [previous_file['x_cat'], x_cat_batch],
+                        axis=0
+                    )
+                    y_batch = np.concatenate([previous_file['y'], y_batch], axis=0)
+                    previous_file = None
+
+                if x_int_batch.shape[0] != batch_size:
+                    raise ValueError('should not happen')
+
+                yield self.__transform_features(x_int_batch, x_cat_batch, y_batch, max_ind_range)
+
+                batch_start_idx += missing_samples
+            if batch_start_idx != samples_in_file:
+                current_slice = slice(batch_start_idx, samples_in_file)
+                if previous_file is not None:
+                    previous_file = {
+                        'x_int' : np.concatenate(
+                            [previous_file['x_int'], x_int[current_slice]],
+                            axis=0
+                        ),
+                        'x_cat' : np.concatenate(
+                            [previous_file['x_cat'], x_cat[current_slice]],
+                            axis=0
+                        ),
+                        'y' : np.concatenate([previous_file['y'], y[current_slice]], axis=0)
+                    }
+                else:
+                    previous_file = {
+                        'x_int' : x_int[current_slice],
+                        'x_cat' : x_cat[current_slice],
+                        'y' : y[current_slice]
+                    }
+
+        if not drop_last:
+            yield self.__transform_features(
+                previous_file['x_int'],
+                previous_file['x_cat'],
+                previous_file['y'],
+                max_ind_range
+            )    
+    def __batch_generator2(self,
+            data_filename, data_directory, days, batch_size, split, drop_last, max_ind_range
+    ):
+        track_size = 0
+        gid = 0
+        while gid < self.length:
+            x_int_batch, x_cat_batch, y_batch = [],[],[]
+            day_prev = day = np.digitize(gid, self.offset_per_file) - 1
+            read_file = self.start_row <= self.offset_per_file[day+1] and \
+                self.offset_per_file[day] < self.last_row
+            filepath = os.path.join(
+                data_directory,
+                data_filename + "_{}_reordered.npz".format(day)
+            )
+            print(f"Rank {self.rank} Reading day {filepath} {read_file} START!")
+            #data = np.load(filepath) if read_file else None
+            if read_file:
+                with np.load(filepath) as data:
+                    x_int = data["X_int"]
+                    x_cat = data["X_cat"]
+                    y = data["y"]
+            print(f"Rank {self.rank} Reading day {filepath} {read_file} DONE!")
+            while day == day_prev:                
+                s = gid - self.offset_per_file[day]
+                e = min(gid + batch_size - track_size, self.offset_per_file[day+1]) - self.offset_per_file[day]
+                track_size += e - s
+                current_slice = slice(s, e)
+                if read_file:
+                    print("read 1 start")        
+                    x_int_batch.append(x_int[current_slice])
+                    print("read 1 append done")
+                    x_cat_batch.append(x_cat[current_slice])
+                    print("read 2 append done")
+                    y_batch.append(y[current_slice])
+                    print("appended something")
+                else:
+                    x_int_batch.append(np.empty((e-s,13)))
+                    x_cat_batch.append(np.empty((e-s,26)))
+                    y_batch.append(np.empty((e-s))) 
+                    print("append nothin")                   
+                if track_size == batch_size:
+                    track_size = 0
+                    x_int_batch = np.concatenate(x_int_batch)
+                    x_cat_batch = np.concatenate(x_cat_batch)
+                    y_batch = np.concatenate(y_batch)
+                    yield self.__transform_features(x_int_batch, x_cat_batch, y_batch, max_ind_range)
+                    x_int_batch, x_cat_batch, y_batch = [],[],[]
+                day_prev = day
+                gid_prev = gid
+                gid = e + self.offset_per_file[day]
+                print(gid)
+                day = np.digitize(gid, self.offset_per_file) - 1                        
+                if day != day_prev or gid <= gid_prev:
+                    break
+    def __batch_generator_(self,
+            data_filename, data_directory, days, batch_size, split, drop_last, max_ind_range
+    ):
+        track_size = 0
+        # global batch start index across all rows in all days. 
+        gid_prev = -1
+        gid = 0
+        while gid + batch_size < self.length and gid_prev < gid:
+            x_int_batch, x_cat_batch, y_batch = [],[],[]
+            day = np.digitize(gid, self.offset_per_file) - 1
+            read_file = self.start_row <= self.offset_per_file[day+1] and \
+                self.offset_per_file[day] < self.last_row
+            filepath = os.path.join(
+                data_directory,
+                data_filename + "_{}_reordered.npz".format(day)
+            )
+            print(f"Rank {self.rank} Reading day {filepath[:-4]+'***.npy'}")
+            X_int = np.load(filepath[:-4] + "_int.npy") if read_file else None
+            X_cat = np.load(filepath[:-4] + "_cat.npy") if read_file else None
+            y = np.load(filepath[:-4] + "_y.npy") if read_file else None
+            while True:
+                # local start and end indices within a day
+                s = gid - self.offset_per_file[day]
+                e = min(gid + batch_size - track_size, self.offset_per_file[day+1]) - self.offset_per_file[day]
+                track_size += e - s
+                if read_file:
+                    x_int_batch.append(X_int[s:e])
+                    x_cat_batch.append(X_cat[s:e])
+                    y_batch.append(y[s:e])
+                else:
+                    x_int_batch.append(np.empty((e-s,1)))
+                    x_cat_batch.append(np.empty((e-s,1)))
+                    y_batch.append(np.empty((e-s,1)))                    
+                if track_size == batch_size:
+                    track_size = 0
+                    x_int_batch = np.concatenate(x_int_batch)
+                    x_cat_batch = np.concatenate(x_cat_batch)
+                    y_batch = np.concatenate(y_batch)
+                    yield self.__transform_features(x_int_batch, x_cat_batch, y_batch, max_ind_range)
+                    x_int_batch, x_cat_batch, y_batch = [],[],[]
+                gid_prev = gid
+                gid = e + self.offset_per_file[day]
+                #if self.rank == 7 and day > 6:
+                print(self.rank, day, self.offset_per_file[day+1] - gid)
+                day_prev = day
+                day = np.digitize(gid, self.offset_per_file) - 1  
+                day_tail = np.digitize(gid + batch_size, self.offset_per_file)                         
+                if day != day_prev or gid <= gid_prev or day_tail == len(self.offset_per_file):
+                    break
 class CriteoIterDataPipe(IterDataPipe):
     """
     IterDataPipe that can be used to stream either the Criteo 1TB Click Logs Dataset
@@ -265,7 +541,10 @@ class BinaryCriteoUtils:
 
         Returns:
             shape (Tuple[int, ...]): Shape tuple.
-        """
+        """   #pp1 = '/home/ubuntu/mountpoint/criteo_terabyte_subsample0.0_maxind40M/day_0_reordered_int.npy'
+        # ff1 = path_manager.open(pp1, "rb")
+        # np.lib.format.read_magic(ff1)
+        # np.lib.format.read_array_header_1_0(ff1)
         path_manager = PathManagerFactory().get(path_manager_key)
         with path_manager.open(path, "rb") as fin:
             np.lib.format.read_magic(fin)
@@ -335,9 +614,9 @@ class BinaryCriteoUtils:
 
     @staticmethod
     def load_npy_range(
-        fname: str,
+        fname: str, #'/home/ubuntu/mountpoint/criteo/1tb_numpy/day_0_dense.npy'
         start_row: int,
-        num_rows: int,
+        num_rows: int, #195841983
         path_manager_key: str = PATH_MANAGER_KEY,
     ) -> np.ndarray:
         """
@@ -356,30 +635,72 @@ class BinaryCriteoUtils:
             output (np.ndarray): numpy array with the desired range of data from the
                 supplied npy file.
         """
+        # pp1 = '/home/ubuntu/mountpoint/criteo_terabyte_subsample0.0_maxind40M/day_0_reordered_int.npy'
+        # ff1 = path_manager.open(pp1, "rb")
+        # np.lib.format.read_magic(ff1)
+        # s1, o1, d1 = np.lib.format.read_array_header_1_0(ff1)
+
         path_manager = PathManagerFactory().get(path_manager_key)
+
+        print("fname ",fname)
+        # /home/ubuntu/mountpoint/criteo_terabyte_subsample0.0_maxind40M/day_0_reordered_y.npy
         with path_manager.open(fname, "rb") as fin:
             np.lib.format.read_magic(fin)
             shape, _order, dtype = np.lib.format.read_array_header_1_0(fin)
+            shape = list(shape)
+            shape[0] = int(min(shape[0],2048*2*500))
+            num_rows = int(shape[0]/2)
             if len(shape) == 2:
                 total_rows, row_size = shape
+            elif len(shape) == 1:
+                total_rows, row_size = shape[0], 1
             else:
                 raise ValueError("Cannot load range for npy with ndim == 2.")
 
-            if not (0 <= start_row < total_rows):
-                raise ValueError(
-                    f"start_row ({start_row}) is out of bounds. It must be between 0 "
-                    f"and {total_rows - 1}, inclusive."
-                )
-            if not (start_row + num_rows <= total_rows):
-                raise ValueError(
-                    f"num_rows ({num_rows}) exceeds number of available rows "
-                    f"({total_rows}) for the given start_row ({start_row})."
-                )
+            if False:
+                if not (0 <= start_row < total_rows): #total_rows == 195841983 
+                   raise ValueError(
+                        f"start_row ({start_row}) is out of bounds. It must be between 0 "
+                        f"and {total_rows - 1}, inclusive."
+                    )
+                if not (start_row + num_rows <= total_rows): # num_rows == 195841983
+                    raise ValueError(
+                        f"num_rows ({num_rows}) exceeds number of available rows "
+                        f"({total_rows}) for the given start_row ({start_row})."
+                    )
 
             offset = start_row * row_size * dtype.itemsize
             fin.seek(offset, os.SEEK_CUR)
             num_entries = num_rows * row_size
-            data = np.fromfile(fin, dtype=dtype, count=num_entries)
+            if False:
+                if True: #'_int' in fname or '_cat' in fname:
+                    data1 = np.ones((50,1)).astype(np.float32)
+                    #BinaryCriteoUtils.load_npy_range.counter = getattr(BinaryCriteoUtils.load_npy_range, 'counter', 0) + 1
+                    #if BinaryCriteoUtils.load_npy_range.counter % 2 == 1:
+                    #    data2 = np.zeros((10,1)).astype(np.float32)
+                    data2 = np.ones((50,1)).astype(np.float32)
+                    data = np.concatenate([data1, data2])
+
+                    data = np.ones((10000,1)).astype(np.float32)
+                    num_rows, row_size = 10000, 1
+                    if True:
+                        if '_cat' in fname:
+                            data = np.zeros((10000,26)).astype(np.int32)
+                            num_rows, row_size = 10000, 26
+                        if '_y' in fname:
+                            data = np.ones((10000,1)).astype(np.float32)
+                            num_rows, row_size = 10000, 1                        
+                #else:
+                #    data = np.array([[1]]).astype(np.float32)
+                #    num_rows, row_size = 1, 1
+                #data = np.array([1]).astype(np.float32)[:, np.newaxis]
+                #num_rows, row_size = 1, 1                
+            else:
+                data = np.fromfile(fin, dtype=dtype, count=num_entries)
+                if dtype == np.float64:
+                    data = data.astype(np.float32)
+                if '_int' in fname:
+                    data = np.log(data + 1)
             return data.reshape((num_rows, row_size))
 
     @staticmethod
@@ -677,7 +998,277 @@ class InMemoryBinaryCriteoIterDataPipe(IterableDataset):
         shuffle_batches: bool = False,
         hashes: Optional[List[int]] = None,
         path_manager_key: str = PATH_MANAGER_KEY,
+
     ) -> None:
+
+        if False:
+            # From OSS, dlrm_data_pytorch.py, class CriteoDataset(Dataset):
+            dataset = 'terabyte'
+            max_ind_range = 40000000
+            sub_sample_rate = 0.0
+            randomize = 'total'
+            split="train" #or train
+            raw_path='/home/ubuntu/mountpoint/criteo_terabyte_subsample0.0_maxind40M/day'
+            pro_data='/home/ubuntu/mountpoint/criteo_terabyte_subsample0.0_maxind40M/'
+            memory_map=True
+            dataset_multiprocessing=False
+            # dataset
+            # tar_fea = 1   # single target
+            den_fea = 13  # 13 dense  features
+            # spa_fea = 26  # 26 sparse features
+            # tad_fea = tar_fea + den_fea
+            # tot_fea = tad_fea + spa_fea
+            if dataset == "kaggle":
+                days = 7
+                out_file = "kaggleAdDisplayChallenge_processed"
+            elif dataset == "terabyte":
+                days = 1 #24
+                out_file = "terabyte_processed"
+            else:
+                raise(ValueError("Data set option is not supported"))
+            self.max_ind_range = max_ind_range
+            self.memory_map = memory_map
+
+            # split the datafile into path and filename
+            lstr = raw_path.split("/")
+            self.d_path = "/".join(lstr[0:-1]) + "/"
+            self.d_file = lstr[-1].split(".")[0] if dataset == "kaggle" else lstr[-1]
+            self.npzfile = self.d_path + (
+                (self.d_file + "_day") if dataset == "kaggle" else self.d_file
+            )
+            self.trafile = self.d_path + (
+                (self.d_file + "_fea") if dataset == "kaggle" else "fea"
+            )
+
+            # check if pre-processed data is available
+            data_ready = True
+            if memory_map:
+                for i in range(days):
+                    reo_data = self.npzfile + "_{0}_reordered.npz".format(i)
+                    if not path.exists(str(reo_data)):
+                        data_ready = False
+            else:
+                if not path.exists(str(pro_data)):
+                    data_ready = False
+
+            # pre-process data if needed
+            # WARNNING: when memory mapping is used we get a collection of files
+            if data_ready:
+                print("Reading pre-processed data=%s" % (str(pro_data)))
+                file = str(pro_data)
+            else:
+                pass
+                # print("Reading raw data=%s" % (str(raw_path)))
+                # file = data_utils.getCriteoAdData(
+                #     raw_path,
+                #     out_file,
+                #     max_ind_range,
+                #     sub_sample_rate,
+                #     days,
+                #     split,
+                #     randomize,
+                #     dataset == "kaggle",
+                #     memory_map,
+                #     dataset_multiprocessing,
+                # )
+
+            # get a number of samples per day
+            total_file = self.d_path + self.d_file + "_day_count.npz"
+            with np.load(total_file) as data:
+                total_per_file = data["total_per_file"]
+            # compute offsets per file
+            self.offset_per_file = np.array([0] + [x for x in total_per_file])
+            for i in range(days):
+                self.offset_per_file[i + 1] += self.offset_per_file[i]
+            # print(self.offset_per_file)
+
+            # setup data
+            if memory_map:
+                # setup the training/testing split
+                self.split = split
+                if split == 'none' or split == 'train':
+                    self.day = 0
+                    self.max_day_range = days if split == 'none' else days - 1
+                elif split == 'test' or split == 'val':
+                    self.day = days - 1
+                    num_samples = self.offset_per_file[days] - \
+                                self.offset_per_file[days - 1]
+                    self.test_size = int(np.ceil(num_samples / 2.))
+                    self.val_size = num_samples - self.test_size
+                else:
+                    sys.exit("ERROR: dataset split is neither none, nor train or test.")
+
+                '''
+                # text
+                print("text")
+                for i in range(days):
+                    fi = self.npzfile + "_{0}".format(i)
+                    with open(fi) as data:
+                        ttt = 0; nnn = 0
+                        for _j, line in enumerate(data):
+                            ttt +=1
+                            if np.int32(line[0]) > 0:
+                                nnn +=1
+                        print("day=" + str(i) + " total=" + str(ttt) + " non-zeros="
+                            + str(nnn) + " ratio=" +str((nnn * 100.) / ttt) + "%")
+                # processed
+                print("processed")
+                for i in range(days):
+                    fi = self.npzfile + "_{0}_processed.npz".format(i)
+                    with np.load(fi) as data:
+                        yyy = data["y"]
+                    ttt = len(yyy)
+                    nnn = np.count_nonzero(yyy)
+                    print("day=" + str(i) + " total=" + str(ttt) + " non-zeros="
+                        + str(nnn) + " ratio=" +str((nnn * 100.) / ttt) + "%")
+                # reordered
+                print("reordered")
+                for i in range(days):
+                    fi = self.npzfile + "_{0}_reordered.npz".format(i)
+                    with np.load(fi) as data:
+                        yyy = data["y"]
+                    ttt = len(yyy)
+                    nnn = np.count_nonzero(yyy)
+                    print("day=" + str(i) + " total=" + str(ttt) + " non-zeros="
+                        + str(nnn) + " ratio=" +str((nnn * 100.) / ttt) + "%")
+                '''
+
+                # load unique counts
+                with np.load(self.d_path + self.d_file + "_fea_count.npz") as data:
+                    self.counts = data["counts"]
+                self.m_den = den_fea  # X_int.shape[1]
+                self.n_emb = len(self.counts)
+                print("Sparse features= %d, Dense features= %d" % (self.n_emb, self.m_den))
+
+                # Load the test data
+                # Only a single day is used for testing
+                if self.split == 'test' or self.split == 'val':
+                    # only a single day is used for testing
+                    fi = self.npzfile + "_{0}_reordered.npz".format(
+                        self.day
+                    )
+                    with np.load(fi) as data:
+                        self.X_int = data["X_int"]  # continuous  feature
+                        self.X_cat = data["X_cat"]  # categorical feature
+                        self.y = data["y"]          # target
+
+            else:
+                # load and preprocess data
+                with np.load(file) as data:
+                    X_int = data["X_int"]  # continuous  feature
+                    X_cat = data["X_cat"]  # categorical feature
+                    y = data["y"]          # target
+                    self.counts = data["counts"]
+                self.m_den = X_int.shape[1]  # den_fea
+                self.n_emb = len(self.counts)
+                print("Sparse fea = %d, Dense fea = %d" % (self.n_emb, self.m_den))
+
+                # create reordering
+                indices = np.arange(len(y))
+
+                if split == "none":
+                    # randomize all data
+                    if randomize == "total":
+                        indices = np.random.permutation(indices)
+                        print("Randomized indices...")
+
+                    X_int[indices] = X_int
+                    X_cat[indices] = X_cat
+                    y[indices] = y
+
+                else:
+                    indices = np.array_split(indices, self.offset_per_file[1:-1])
+
+                    # randomize train data (per day)
+                    if randomize == "day":  # or randomize == "total":
+                        for i in range(len(indices) - 1):
+                            indices[i] = np.random.permutation(indices[i])
+                        print("Randomized indices per day ...")
+
+                    train_indices = np.concatenate(indices[:-1])
+                    test_indices = indices[-1]
+                    test_indices, val_indices = np.array_split(test_indices, 2)
+
+                    print("Defined %s indices..." % (split))
+
+                    # randomize train data (across days)
+                    if randomize == "total":
+                        train_indices = np.random.permutation(train_indices)
+                        print("Randomized indices across days ...")
+
+                    # create training, validation, and test sets
+                    if split == 'train':
+                        self.X_int = [X_int[i] for i in train_indices]
+                        self.X_cat = [X_cat[i] for i in train_indices]
+                        self.y = [y[i] for i in train_indices]
+                    elif split == 'val':
+                        self.X_int = [X_int[i] for i in val_indices]
+                        self.X_cat = [X_cat[i] for i in val_indices]
+                        self.y = [y[i] for i in val_indices]
+                    elif split == 'test':
+                        self.X_int = [X_int[i] for i in test_indices]
+                        self.X_cat = [X_cat[i] for i in test_indices]
+                        self.y = [y[i] for i in test_indices]
+
+                print("Split data according to indices...")
+
+        
+        
+        if False:
+            #print("\n\ncreating dataset iterator\n\n")
+            self.train_loader = DataLoader(
+                rank,
+                world_size,
+                data_directory='/home/ubuntu/mountpoint/criteo_terabyte_subsample0.0_maxind40M',
+                data_filename='day',
+                days=list(range(3)),
+                #days=list(range(1)),
+                batch_size=2048,
+                max_ind_range=40000000,
+                split="train"
+            )
+
+            # load all days into self.train_data. Then treat all days as a single huge day, so rest of code thinks just one day is being trained.
+            # Do this because torhrec code uses a 2d [which day][which record in that day] format, whereas dlrm oss uses a 1d [which record in all days records]
+            
+            print("\nconverting dataset iterator to list START\n")
+            self.train_data = list(self.train_loader)
+            print("\nconverting dataset iterator to list DONE\n")
+            self.dense_arrs = [[r[0] for r in self.train_data]] #   [self.train_data[:][0]]
+            self.sparse_arrs = [[r[2] for r in self.train_data]] # [self.train_data[:][2]]
+            self.labels_arrs = [[r[3] for r in self.train_data]]
+
+            print("\nStacking data\n")
+
+            self.dense_arrs = np.stack(self.dense_arrs[0][:-1])
+            self.sparse_arrs = np.stack(self.sparse_arrs[0][:-1])
+            self.labels_arrs = np.stack(self.labels_arrs[0][:-1])
+
+            print("data prep done!\n")
+
+        #################################################################################################
+        #################################################################################################
+        #################################################################################################
+        #################################################################################################
+        #################################################################################################
+        #################################################################################################
+        #################################################################################################
+        #################################################################################################
+        #################################################################################################
+        #################################################################################################
+        #################################################################################################
+        #################################################################################################
+        #################################################################################################
+        #################################################################################################
+        #################################################################################################
+        #################################################################################################
+        #################################################################################################
+        #################################################################################################
+        #################################################################################################
+        #################################################################################################
+        #################################################################################################
+
+
         self.dense_paths = dense_paths
         self.sparse_paths = sparse_paths
         self.labels_paths = labels_paths
@@ -689,7 +1280,9 @@ class InMemoryBinaryCriteoIterDataPipe(IterableDataset):
         self.path_manager_key = path_manager_key
         self.path_manager: PathManager = PathManagerFactory().get(path_manager_key)
 
+        #print("\n_load_data_for_rank\n")
         self._load_data_for_rank()
+        #print("\n_load_data_for_rank DONE\n")
         self.num_rows_per_file: List[int] = [a.shape[0] for a in self.dense_arrs]
         self.num_batches: int = sum(self.num_rows_per_file) // batch_size
 
@@ -712,6 +1305,49 @@ class InMemoryBinaryCriteoIterDataPipe(IterableDataset):
         self.index_per_key: Dict[str, int] = {
             key: i for (i, key) in enumerate(self.keys)
         }
+
+    # From OSS
+    # not in use because OSS's train_data and train_loader variables are redundant, and this is for train_data is no longer used.
+    #    def __getitem__(self, index):
+    #
+    #        if isinstance(index, slice):
+    #            return [
+    #                self[idx] for idx in range(
+    #                    index.start or 0, index.stop or len(self), index.step or 1
+    #                )
+    #            ]
+    #
+    #        if self.memory_map:
+    #            if self.split == 'none' or self.split == 'train':
+    #                # check if need to swicth to next day and load data
+    #                if index == self.offset_per_file[self.day]:
+    #                    # print("day_boundary switch", index)
+    #                    self.day_boundary = self.offset_per_file[self.day]
+    #                    fi = self.npzfile + "_{0}_reordered.npz".format(
+    #                        self.day
+    #                    )
+    #                    # print('Loading file: ', fi)
+    #                    with np.load(fi) as data:
+    #                        self.X_int = data["X_int"]  # continuous  feature
+    #                        self.X_cat = data["X_cat"]  # categorical feature
+    #                        self.y = data["y"]          # target
+    #                    self.day = (self.day + 1) % self.max_day_range
+    #
+    #                i = index - self.day_boundary
+    #            elif self.split == 'test' or self.split == 'val':
+    #                # only a single day is used for testing
+    #                i = index + (0 if self.split == 'test' else self.test_size)
+    #            else:
+    #                sys.exit("ERROR: dataset split is neither none, nor train or test.")
+    #        else:
+    #            i = index
+    #
+    #        if self.max_ind_range > 0:
+    #            return self.X_int[i], self.X_cat[i] % self.max_ind_range, self.y[i]
+    #        else:
+    #            return self.X_int[i], self.X_cat[i], self.y[i]    
+
+
 
     def _load_data_for_rank(self) -> None:
         file_idx_to_row_range = BinaryCriteoUtils.get_file_idx_to_row_range(
@@ -740,10 +1376,10 @@ class InMemoryBinaryCriteoIterDataPipe(IterableDataset):
                     )
                 )
 
-        if self.hashes is not None:
-            hashes_np = np.array(self.hashes).reshape((1, CAT_FEATURE_COUNT))
-            for sparse_arr in self.sparse_arrs:
-                sparse_arr %= hashes_np
+        #if self.hashes is not None:
+        #    hashes_np = np.array(self.hashes).reshape((1, CAT_FEATURE_COUNT))
+        #    for sparse_arr in self.sparse_arrs:
+        #        sparse_arr %= hashes_np
 
     def _np_arrays_to_batch(
         self, dense: np.ndarray, sparse: np.ndarray, labels: np.ndarray
@@ -772,6 +1408,21 @@ class InMemoryBinaryCriteoIterDataPipe(IterableDataset):
         )
 
     def __iter__(self) -> Iterator[Batch]:
+
+        #return iter(
+        #    _batch_generator(
+        #        self.data_filename, self.data_directory, self.days,
+        #        self.batch_size, self.split, self.drop_last_batch, self.max_ind_range
+        #    )
+        #)
+
+
+
+
+
+
+
+
         # Invariant: buffer never contains more than batch_size rows.
         buffer: Optional[List[np.ndarray]] = None
 
@@ -802,7 +1453,16 @@ class InMemoryBinaryCriteoIterDataPipe(IterableDataset):
                     self.batch_size - buffer_row_count,
                     self.num_rows_per_file[file_idx] - row_idx,
                 )
-                slice_ = slice(row_idx, row_idx + rows_to_get)
+                slice_ = slice(row_idx, row_idx + rows_to_get) #
+
+                #for simple nn test:
+                slice_ = slice(0, 2048)
+
+                #print("slice: ", row_idx/2048)
+                #slice_ = slice(0, 2048)
+                #self.dense_arrs[file_idx][slice_, :] = 1.0
+                #self.sparse_arrs[file_idx][slice_, :] = 0.0
+                #self.labels_arrs[file_idx][slice_, :] = 0.0     
                 append_to_buffer(
                     self.dense_arrs[file_idx][slice_, :],
                     self.sparse_arrs[file_idx][slice_, :],
@@ -811,7 +1471,7 @@ class InMemoryBinaryCriteoIterDataPipe(IterableDataset):
                 row_idx += rows_to_get
 
                 if row_idx >= self.num_rows_per_file[file_idx]:
-                    file_idx += 1
+                    #file_idx += 1
                     row_idx = 0
 
     def __len__(self) -> int:

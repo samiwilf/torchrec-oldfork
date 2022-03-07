@@ -297,11 +297,23 @@ class BaseBatchedEmbedding(BaseEmbedding):
             self._weight_init_maxs,
             self.split_embedding_weights(),
         ):
-            assert param.shape == (rows, emb_dim)
+            import numpy as np
+            np.random.seed(0)
+            torch.manual_seed(0) 
+            assert param.shape == (rows, emb_dim)                        
             param.data.uniform_(
                 weight_init_min,
                 weight_init_max,
             )
+            n = param.data.shape[0]
+            m = param.data.shape[1]
+            import numpy as np
+            np.random.seed(0)            
+            W = np.random.uniform(
+                    low=-np.sqrt(1 / n), high=np.sqrt(1 / n), size=(n, m)
+                ).astype(np.float32) 
+            param.data.copy_ (torch.tensor(W, requires_grad=True))
+
 
     def forward(self, features: KeyedJaggedTensor) -> torch.Tensor:
         return self.emb_module(
@@ -509,11 +521,24 @@ class BaseBatchedEmbeddingBag(BaseEmbedding):
             self._weight_init_maxs,
             self.split_embedding_weights(),
         ):
+            import numpy as np
+            np.random.seed(0)        
+            torch.manual_seed(0) 
             assert param.shape == (rows, emb_dim)
             param.data.uniform_(
                 weight_init_min,
                 weight_init_max,
             )
+            n = param.data.shape[0]
+            m = param.data.shape[1]
+            import numpy as np
+            np.random.seed(0)
+            W = np.random.uniform(
+                    low=-np.sqrt(1 / n), high=np.sqrt(1 / n), size=(n, m)
+                ).astype(np.float32) 
+            #param.data[:,:] = W[:,:]
+            #param.data = torch.tensor(W, requires_grad=True, device=param.data.device)              
+            param.data.copy_(torch.tensor(W, requires_grad=True))
 
     def forward(self, features: KeyedJaggedTensor) -> torch.Tensor:
         weights = features.weights_or_none()
