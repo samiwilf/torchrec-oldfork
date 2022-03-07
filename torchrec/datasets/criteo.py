@@ -25,6 +25,7 @@ from torchrec.mysettings import (
     INT_FEATURE_COUNT,
     CAT_FEATURE_COUNT,
     DAYS,
+    BATCH_SIZE,
     SETTING,
     LOG_FILE,
 )
@@ -682,12 +683,19 @@ class BinaryCriteoUtils:
             offset = start_row * row_size * dtype.itemsize
             fin.seek(offset, os.SEEK_CUR)
             num_entries = num_rows * row_size
-            if SETTING == 1:                
+            if SETTING == 1:
                 if '_cat' in fname:
                     data = np.zeros((1000,1)).astype(np.float32)
                 else:
                     data = np.ones((1000,1)).astype(np.float32)
                 num_rows, row_size = 1000, 1
+            if SETTING == 2:
+                fake_file_num_entries = BATCH_SIZE*100
+                if '_cat' in fname:
+                    data = np.zeros((fake_file_num_entries,1)).astype(np.float32)
+                else:
+                    data = np.ones((fake_file_num_entries,1)).astype(np.float32)
+                num_rows, row_size = fake_file_num_entries, 1
                 if False: #'_int' in fname or '_cat' in fname:
                     data1 = np.ones((50,1)).astype(np.float32)
                     #BinaryCriteoUtils.load_npy_range.counter = getattr(BinaryCriteoUtils.load_npy_range, 'counter', 0) + 1
@@ -1473,7 +1481,9 @@ class InMemoryBinaryCriteoIterDataPipe(IterableDataset):
                 #for simple nn test:
                 #slice_ = slice(0, 2048)
                 if SETTING == 1:
-                    slice_ = slice(0, 1)
+                    slice_ = slice(0, BATCH_SIZE)
+                if SETTING == 2:
+                    slice_ = slice(0, BATCH_SIZE)
 
                 #print("slice: ", row_idx/2048)
                 #slice_ = slice(0, 2048)

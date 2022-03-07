@@ -90,7 +90,8 @@ class Perceptron(torch.nn.Module):
             torch.Tensor: tensor of shape (B, O) where O is number of elements per
                 channel in each output sample (i.e. `out_size`).
         """
-        return self._activation_fn(self._linear(input))
+        #return self._activation_fn(self._linear(input))
+        return self._linear(input)
 
 
 class MLP(torch.nn.Module):
@@ -151,12 +152,16 @@ class MLP(torch.nn.Module):
         if not isinstance(activation, str):
             self._mlp: torch.nn.Module = torch.nn.Sequential(
                 *[
-                    Perceptron(
-                        layer_sizes[i - 1] if i > 0 else in_size,
-                        layer_sizes[i],
-                        bias=bias,
-                        activation=extract_module_or_tensor_callable(activation),
-                        device=device,
+                    torch.nn.Sequential(
+                        Perceptron(
+                            layer_sizes[i - 1] if i > 0 else in_size,
+                            layer_sizes[i],
+                            bias=bias,
+                            #activation=extract_module_or_tensor_callable(activation),
+                            activation=None,
+                            device=device,
+                        ),
+                        torch.nn.ReLU()
                     )
                     for i in range(len(layer_sizes))
                 ]

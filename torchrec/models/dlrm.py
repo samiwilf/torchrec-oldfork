@@ -256,6 +256,7 @@ class OverArch(nn.Module):
                 device=device,
             ),
             LL,
+            #torch.nn.Sigmoid()
             #nn.Linear(layer_sizes[-2], layer_sizes[-1], bias=True, device=device),
         )
 

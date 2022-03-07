@@ -1,15 +1,16 @@
 
 
 LOG_PATH = "/home/ubuntu/repos/torchrec-fork/examples/dlrm/"
-SETTING = 1
+SETTING = 2
 
 if SETTING == 1:
     LOG_FILE = "Losses_setting1_simplestNN.txt"    
     INT_FEATURE_COUNT = 1
     CAT_FEATURE_COUNT = 1
     DAYS = 1
+    BATCH_SIZE = 1
     ARGV = ['--pin_memory', 
-        '--batch_size', '1', 
+        '--batch_size', str(BATCH_SIZE),
         '--epochs', '1', 
         '--num_embeddings_per_feature', '1', 
         '--embedding_dim', '4', 
@@ -19,10 +20,20 @@ if SETTING == 1:
         '--learning_rate', '1.0']
 
 if SETTING == 2:
-    LOG_FILE = "/home/ubuntu/repos/torchrec/examples/dlrm/Losses_day_0_single_sample_.txt"
-    INT_FEATURE_COUNT = 13 #1 #13
-    CAT_FEATURE_COUNT = 26 #2
-    DAYS = 1#24
+    LOG_FILE = "Losses_setting2_simplestNN.txt"    
+    INT_FEATURE_COUNT = 1
+    CAT_FEATURE_COUNT = 1
+    DAYS = 1
+    BATCH_SIZE = 8388608
+    ARGV = ['--pin_memory', 
+        '--batch_size', str(BATCH_SIZE), 
+        '--epochs', '1', 
+        '--num_embeddings_per_feature', '1', 
+        '--embedding_dim', '4', 
+        '--dense_arch_layer_sizes', '4', 
+        '--over_arch_layer_sizes', '1,1', 
+        '--in_memory_binary_criteo_path', '/home/ubuntu/mountpoint/criteo_terabyte_subsample0.0_maxind40M', 
+        '--learning_rate', '1.0']
 
 if SETTING == 3:
     LOG_FILE = "/home/ubuntu/repos/torchrec/examples/dlrm/Losses_day_0_single_sample_.txt"
