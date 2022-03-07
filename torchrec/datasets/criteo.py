@@ -695,7 +695,13 @@ class BinaryCriteoUtils:
                     data = np.zeros((fake_file_num_entries,1)).astype(np.float32)
                 else:
                     data = np.ones((fake_file_num_entries,1)).astype(np.float32)
-                num_rows, row_size = fake_file_num_entries, 1
+            if SETTING == 3:
+                fake_file_num_entries = BATCH_SIZE*100
+                if '_cat' in fname:
+                    data = np.array([ np.arange(BATCH_SIZE)[:]*16//BATCH_SIZE for _ in range(fake_file_num_entries)])
+                else:
+                    data = np.ones((fake_file_num_entries,1)).astype(np.float32)             
+
                 if False: #'_int' in fname or '_cat' in fname:
                     data1 = np.ones((50,1)).astype(np.float32)
                     #BinaryCriteoUtils.load_npy_range.counter = getattr(BinaryCriteoUtils.load_npy_range, 'counter', 0) + 1
@@ -724,6 +730,8 @@ class BinaryCriteoUtils:
                     data = data.astype(np.float32)
                 if '_int' in fname:
                     data = np.log(data + 1)
+                    
+            num_rows, row_size = data.shape[0], data.shape[1]
             return data.reshape((num_rows, row_size))
 
     @staticmethod
@@ -1483,6 +1491,8 @@ class InMemoryBinaryCriteoIterDataPipe(IterableDataset):
                 if SETTING == 1:
                     slice_ = slice(0, BATCH_SIZE)
                 if SETTING == 2:
+                    slice_ = slice(0, BATCH_SIZE)
+                else:
                     slice_ = slice(0, BATCH_SIZE)
 
                 #print("slice: ", row_idx/2048)
