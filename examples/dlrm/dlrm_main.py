@@ -32,6 +32,7 @@ from torchrec.mysettings import (
     DAYS,
     SETTING,
     LOG_FILE,
+    MODEL_EVAL,
 )
 
 # OSS import
@@ -198,7 +199,7 @@ def _evaluate(
         None.
     """
     model = train_pipeline._model
-    if SETTING == 5:
+    if MODEL_EVAL:
         model.eval()
     device = train_pipeline._device
     limit_batches = (

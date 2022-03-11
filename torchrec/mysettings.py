@@ -9,7 +9,9 @@ print('*'.center(40, '*'))
 print(f"  RUNNING SETTING {SETTING}  ".center(40, '*'))
 print('*'.center(40, '*'))
 
-SAVE_DEBUG_DATA = True if SETTING != 5 else False
+#Defaults, may be overwritten by settings below.
+MODEL_EVAL = False
+SAVE_DEBUG_DATA = True
 
 DENSE_LOG_FILE = pathlib.Path(LOG_PATH + "s" + str(SETTING) + "_DENSE.txt")
 SPARSE_LOG_FILE = pathlib.Path(LOG_PATH + "s" + str(SETTING) + "_SPARSE.txt")
@@ -55,9 +57,10 @@ if SETTING == 3:
     ]
 
 if SETTING == 4:
-    LOG_FILE = "s4_losses_day_0-new.txt"
-    INT_FEATURE_COUNT = 13 #1 #13
-    DAYS = 1#24
+    SAVE_DEBUG_DATA = False
+    LOG_FILE = "s4.txt"
+    INT_FEATURE_COUNT = 13
+    DAYS = 1
     BATCH_SIZE = 2048 
     LN_EMB=[45833188,36746,17245,7413,20243,3,7114,1441,62,29275261,1572176,345138,10,2209,11267,128,4,974,14,48937457,11316796,40094537,452104,12606,104,35]
     ARGV = [ 
@@ -68,6 +71,8 @@ if SETTING == 4:
     ]
 
 if SETTING == 5:
+    SAVE_DEBUG_DATA = False
+    MODEL_EVAL = True
     LOG_FILE = "s5_losses_terabyte_full.txt"
     INT_FEATURE_COUNT = 13
     #CAT_FEATURE_COUNT = 26 
