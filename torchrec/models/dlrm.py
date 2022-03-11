@@ -107,7 +107,8 @@ class SparseArch(nn.Module):
         for name in self.sparse_feature_names:
             sparse_values.append(sparse[name])
 
-        return torch.cat(sparse_values, dim=1).reshape(B, self.F, self.D)
+        #return torch.cat(sparse_values, dim=1).reshape(B, self.F, self.D)
+        return torch.cat(sparse_values, dim=0).reshape(self.F, self.D, B)
 
     @property
     def sparse_feature_names(self) -> List[str]:
@@ -187,9 +188,9 @@ class InteractionArch(nn.Module):
     def __init__(self, num_sparse_features: int) -> None:
         super().__init__()
         self.F: int = num_sparse_features
-        self.triu_indices: torch.Tensor = torch.triu_indices(
+        self.triu_indices: torch.Tensor = self.F - torch.fliplr(torch.triu_indices(
             self.F + 1, self.F + 1, offset=1
-        )
+        ))
 
     def forward(
         self, dense_features: torch.Tensor, sparse_features: torch.Tensor
@@ -202,13 +203,26 @@ class InteractionArch(nn.Module):
         Returns:
             torch.Tensor: an output tensor of size B X (D + F + F choose 2).
         """
+
+        #x / dense_features : 2048, 128 or is it 2048, 1, 128
+        #ly / sparse_features : torch.Size([2048, 26, 128])
+
         if self.F <= 0:
             return dense_features
         (B, D) = dense_features.shape
 
-        combined_values = torch.cat(
-            (dense_features.unsqueeze(1), sparse_features), dim=1
-        )
+        #dense_features.unsqueeze(1).shape : 2048, 1, 13
+
+        #combined_values = torch.cat(
+        #    (dense_features.unsqueeze(1), sparse_features), dim=1
+        #) # outputs 2048, 27, 128
+        
+        #combined_values = torch.cat((dense_features.unsqueeze(0), sparse_features.reshape(-1, B, D)), dim=1).view((B, -1, D))
+
+        combined_values = torch.cat((dense_features.unsqueeze(0).transpose(0,1), sparse_features.reshape(-1, B, D).transpose(0,1)), dim=1).view((B, -1, D))
+
+        #torch.stack([t for t in combined_values.transpose(1,0)])
+        #combined_values = combined_values.transpose(0,1)        
 
         # dense/sparse + sparse/sparse interaction
         # size B X (F + F choose 2)
@@ -246,6 +260,23 @@ class OverArch(nn.Module):
         super().__init__()
         if len(layer_sizes) <= 1:
             raise ValueError("OverArch must have multiple layers.")
+        n = layer_sizes[-2]
+        m = layer_sizes[-1]
+        LL = nn.Linear(int(n), int(m), bias=True, device=device)
+        import numpy as np
+        np.random.seed(0)
+        mean = 0.0  # std_dev = np.sqrt(variance)
+        std_dev = np.sqrt(2 / (m + n))  # np.sqrt(1 / m) # np.sqrt(1 / n)
+        W = np.random.normal(mean, std_dev, size=(m, n)).astype(np.float32)
+        std_dev = np.sqrt(1 / m)  # np.sqrt(2 / (m + 1))
+        bt = np.random.normal(mean, std_dev, size=m).astype(np.float32)
+        #LL.weight.data = torch.tensor(W,device=device)
+        LL.weight.data.copy_(torch.tensor(W))
+        LL.weight.requires_grad = True
+        #LL.bias.data = torch.tensor(bt,device=device)
+        LL.bias.data.copy_(torch.tensor(bt))
+        LL.bias.requires_grad = True        
+
         self.model: nn.Module = nn.Sequential(
             MLP(
                 in_features,
@@ -254,7 +285,9 @@ class OverArch(nn.Module):
                 activation="relu",
                 device=device,
             ),
-            nn.Linear(layer_sizes[-2], layer_sizes[-1], bias=True, device=device),
+            LL,
+            #torch.nn.Sigmoid()
+            #nn.Linear(layer_sizes[-2], layer_sizes[-1], bias=True, device=device),
         )
 
     def forward(self, features: torch.Tensor) -> torch.Tensor:
@@ -398,8 +431,9 @@ class DLRM(nn.Module):
         Returns:
             torch.Tensor:
         """
-        embedded_dense = self.dense_arch(dense_features)
-        embedded_sparse = self.sparse_arch(sparse_features)
+        embedded_dense = self.dense_arch(dense_features) #outputs shape 2048, 128
+        #sparse_features._values.copy_(torch.cat(torch.tensor([sparse_features._values[k::ndevices] for k in range(ndevices)])))
+        embedded_sparse = self.sparse_arch(sparse_features) #outputs shape torch.Size([2048, 26, 128])
         concatenated_dense = self.inter_arch(
             dense_features=embedded_dense, sparse_features=embedded_sparse
         )

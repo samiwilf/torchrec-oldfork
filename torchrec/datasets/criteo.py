@@ -19,6 +19,17 @@ from typing import (
     Tuple,
 )
 
+import torchrec.mysettings as mysettings
+from torchrec.mysettings import (
+    ARGV,
+    INT_FEATURE_COUNT,
+    CAT_FEATURE_COUNT,
+    DAYS,
+    SETTING,
+    LOG_FILE,
+    BATCH_SIZE
+)
+
 import numpy as np
 import torch
 import torch.utils.data.datapipes as dp
@@ -35,9 +46,9 @@ from torchrec.datasets.utils import (
 from torchrec.sparse.jagged_tensor import KeyedJaggedTensor
 
 FREQUENCY_THRESHOLD = 3
-INT_FEATURE_COUNT = 13
-CAT_FEATURE_COUNT = 26
-DAYS = 24
+INT_FEATURE_COUNT = mysettings.INT_FEATURE_COUNT
+CAT_FEATURE_COUNT = mysettings.CAT_FEATURE_COUNT
+DAYS = mysettings.DAYS #1#24
 DEFAULT_LABEL_NAME = "label"
 DEFAULT_INT_NAMES: List[str] = [f"int_{idx}" for idx in range(INT_FEATURE_COUNT)]
 DEFAULT_CAT_NAMES: List[str] = [f"cat_{idx}" for idx in range(CAT_FEATURE_COUNT)]
@@ -335,9 +346,9 @@ class BinaryCriteoUtils:
 
     @staticmethod
     def load_npy_range(
-        fname: str,
+        fname: str, #'/home/ubuntu/mountpoint/criteo/1tb_numpy/day_0_dense.npy'
         start_row: int,
-        num_rows: int,
+        num_rows: int, #195841983
         path_manager_key: str = PATH_MANAGER_KEY,
     ) -> np.ndarray:
         """
@@ -356,31 +367,112 @@ class BinaryCriteoUtils:
             output (np.ndarray): numpy array with the desired range of data from the
                 supplied npy file.
         """
+        # pp1 = '/home/ubuntu/mountpoint/criteo_terabyte_subsample0.0_maxind40M/day_0_reordered_int.npy'
+        # ff1 = path_manager.open(pp1, "rb")
+        # np.lib.format.read_magic(ff1)
+        # s1, o1, d1 = np.lib.format.read_array_header_1_0(ff1)
+
         path_manager = PathManagerFactory().get(path_manager_key)
+
+        print("fname ",fname)
+        # /home/ubuntu/mountpoint/criteo_terabyte_subsample0.0_maxind40M/day_0_reordered_y.npy
         with path_manager.open(fname, "rb") as fin:
             np.lib.format.read_magic(fin)
             shape, _order, dtype = np.lib.format.read_array_header_1_0(fin)
+            # shape = list(shape)
+            # shape[0] = int(min(shape[0],2048*2*500))
+            # num_rows = int(shape[0]/2)
             if len(shape) == 2:
                 total_rows, row_size = shape
+            elif len(shape) == 1:
+                total_rows, row_size = shape[0], 1
             else:
                 raise ValueError("Cannot load range for npy with ndim == 2.")
 
-            if not (0 <= start_row < total_rows):
-                raise ValueError(
-                    f"start_row ({start_row}) is out of bounds. It must be between 0 "
-                    f"and {total_rows - 1}, inclusive."
-                )
-            if not (start_row + num_rows <= total_rows):
-                raise ValueError(
-                    f"num_rows ({num_rows}) exceeds number of available rows "
-                    f"({total_rows}) for the given start_row ({start_row})."
-                )
+            if False:
+                if not (0 <= start_row < total_rows): #total_rows == 195841983 
+                   raise ValueError(
+                        f"start_row ({start_row}) is out of bounds. It must be between 0 "
+                        f"and {total_rows - 1}, inclusive."
+                    )
+                if not (start_row + num_rows <= total_rows): # num_rows == 195841983
+                    raise ValueError(
+                        f"num_rows ({num_rows}) exceeds number of available rows "
+                        f"({total_rows}) for the given start_row ({start_row})."
+                    )
 
             offset = start_row * row_size * dtype.itemsize
             fin.seek(offset, os.SEEK_CUR)
             num_entries = num_rows * row_size
-            data = np.fromfile(fin, dtype=dtype, count=num_entries)
+
+            if SETTING == 1:
+                if '_cat' in fname:
+                    data = np.zeros((1000,1)).astype(np.float32)
+                else:
+                    data = np.ones((1000,1)).astype(np.float32)
+                num_rows, row_size = 1000, 1
+
+            if SETTING == 2:
+                fake_file_num_entries = BATCH_SIZE*100
+                if '_cat' in fname:
+                    data = np.zeros((fake_file_num_entries,1)).astype(np.float32)
+                else:
+                    data = np.ones((fake_file_num_entries,1)).astype(np.float32)
+                num_rows, row_size = data.shape[0], data.shape[1]
+            if SETTING == 3:
+                fake_file_num_entries = BATCH_SIZE*100
+                if '_cat' in fname:
+                    #data = np.array([ (np.arange(CAT_FEATURE_COUNT) + _) % BATCH_SIZE for _ in range(fake_file_num_entries)])
+                    #data = np.array([ np.zeros((CAT_FEATURE_COUNT)) for _ in range(fake_file_num_entries)])
+                    np.random.seed(0)
+                    r = np.random.uniform(0.0, 0.99, size=(BATCH_SIZE, CAT_FEATURE_COUNT))*12
+                    r = np.trunc(r).astype(np.float32)
+                    #r[:,:]=0
+                    data = np.concatenate([r for _ in range(100)], axis=0)
+                #elif '_int' in fname:
+                #    data = ((np.arange(fake_file_num_entries)) % BATCH_SIZE).astype(np.float32)[:, np.newaxis]
+                else:
+                    data = np.ones((fake_file_num_entries,1)).astype(np.float32)          
+                num_rows, row_size = data.shape[0], data.shape[1]
+                """
+                batch.sparse_features._values
+                tensor([6., 6., 6., 8., 8., 8., 7., 7., 7., 6., 6., 6., 5., 5., 5.],
+                    device='cuda:0')
+                """
+
+
+
+                if False: #'_int' in fname or '_cat' in fname:
+                    data1 = np.ones((50,1)).astype(np.float32)
+                    #BinaryCriteoUtils.load_npy_range.counter = getattr(BinaryCriteoUtils.load_npy_range, 'counter', 0) + 1
+                    #if BinaryCriteoUtils.load_npy_range.counter % 2 == 1:
+                    #    data2 = np.zeros((10,1)).astype(np.float32)
+                    data2 = np.ones((50,1)).astype(np.float32)
+                    data = np.concatenate([data1, data2])
+
+                    data = np.ones((10000,1)).astype(np.float32)
+                    num_rows, row_size = 10000, 1
+                    if True:
+                        if '_cat' in fname:
+                            data = np.zeros((10000,26)).astype(np.int32)
+                            num_rows, row_size = 10000, 26
+                        if '_y' in fname:
+                            data = np.ones((10000,1)).astype(np.float32)
+                            num_rows, row_size = 10000, 1                        
+                #else:
+                #    data = np.array([[1]]).astype(np.float32)
+                #    num_rows, row_size = 1, 1
+                #data = np.array([1]).astype(np.float32)[:, np.newaxis]
+                #num_rows, row_size = 1, 1                
+            if SETTING == 4 or SETTING == 5:
+                data = np.fromfile(fin, dtype=dtype, count=num_entries)
+                if dtype == np.float64:
+                    data = data.astype(np.float32)
+                if '_int' in fname:
+                    data = np.log(data + 1)
+                                
             return data.reshape((num_rows, row_size))
+
 
     @staticmethod
     def sparse_to_contiguous(
@@ -803,6 +895,8 @@ class InMemoryBinaryCriteoIterDataPipe(IterableDataset):
                     self.num_rows_per_file[file_idx] - row_idx,
                 )
                 slice_ = slice(row_idx, row_idx + rows_to_get)
+                #if SETTING == 3:
+                #    slice_ = slice(0, BATCH_SIZE)
                 append_to_buffer(
                     self.dense_arrs[file_idx][slice_, :],
                     self.sparse_arrs[file_idx][slice_, :],
@@ -811,7 +905,10 @@ class InMemoryBinaryCriteoIterDataPipe(IterableDataset):
                 row_idx += rows_to_get
 
                 if row_idx >= self.num_rows_per_file[file_idx]:
-                    file_idx += 1
+                    if SETTING == 3:
+                        pass
+                    else:
+                        file_idx += 1
                     row_idx = 0
 
     def __len__(self) -> int:

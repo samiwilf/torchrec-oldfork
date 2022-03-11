@@ -303,6 +303,16 @@ class BaseBatchedEmbedding(BaseEmbedding):
                 weight_init_max,
             )
 
+            n = param.data.shape[0]
+            m = param.data.shape[1]
+            import numpy as np
+            np.random.seed(0)            
+            W = np.random.uniform(
+                    low=-np.sqrt(1 / n), high=np.sqrt(1 / n), size=(n, m)
+                ).astype(np.float32) 
+            param.data.copy_ (torch.tensor(W, requires_grad=True))
+
+
     def forward(self, features: KeyedJaggedTensor) -> torch.Tensor:
         return self.emb_module(
             indices=features.values().long(),
@@ -514,6 +524,16 @@ class BaseBatchedEmbeddingBag(BaseEmbedding):
                 weight_init_min,
                 weight_init_max,
             )
+
+            n = param.data.shape[0]
+            m = param.data.shape[1]
+            import numpy as np
+            np.random.seed(0)            
+            W = np.random.uniform(
+                    low=-np.sqrt(1 / n), high=np.sqrt(1 / n), size=(n, m)
+                ).astype(np.float32) 
+            param.data.copy_ (torch.tensor(W, requires_grad=True))
+
 
     def forward(self, features: KeyedJaggedTensor) -> torch.Tensor:
         weights = features.weights_or_none()

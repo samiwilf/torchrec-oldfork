@@ -25,6 +25,14 @@ from torchrec.modules.embedding_configs import EmbeddingBagConfig
 from torchrec.optim.keyed import KeyedOptimizerWrapper
 from tqdm import tqdm
 
+from torchrec.mysettings import (
+    ARGV,
+    INT_FEATURE_COUNT,
+    CAT_FEATURE_COUNT,
+    DAYS,
+    SETTING,
+    LOG_FILE,
+)
 
 # OSS import
 try:
@@ -190,7 +198,8 @@ def _evaluate(
         None.
     """
     model = train_pipeline._model
-    model.eval()
+    if SETTING == 5:
+        model.eval()
     device = train_pipeline._device
     limit_batches = (
         args.limit_val_batches if stage == "val" else args.limit_test_batches
@@ -216,6 +225,7 @@ def _evaluate(
     for _ in tqdm(iter(int, 1), desc=f"Evaluating {stage} set"):
         try:
             _loss, logits, labels = train_pipeline.progress(combined_iterator)
+            labels = labels.int()
             auroc(logits, labels)
             accuracy(logits, labels)
         except StopIteration:
@@ -334,6 +344,7 @@ def main(argv: List[str]) -> None:
     Returns:
         None.
     """
+    argv = ARGV
     args = parse_args(argv)
 
     rank = int(os.environ["LOCAL_RANK"])

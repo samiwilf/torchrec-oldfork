@@ -76,8 +76,10 @@ class DLRMTrain(nn.Module):
     def forward(
         self, batch: Batch
     ) -> Tuple[torch.Tensor, Tuple[torch.Tensor, torch.Tensor, torch.Tensor]]:
+        #batch.sparse_features._values.copy_(torch.tensor([0,1,2,1,2,3,2,3,4,3,4,5,4,5,6]))
         logits = self.model(batch.dense_features, batch.sparse_features)
-        logits = logits.squeeze()
+        #logits = logits.squeeze()
+        logits = logits.reshape(-1)
         loss = self.loss_fn(logits, batch.labels.float())
 
         return loss, (loss.detach(), logits.detach(), batch.labels.detach())
