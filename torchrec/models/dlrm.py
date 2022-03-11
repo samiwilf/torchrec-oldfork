@@ -7,6 +7,10 @@
 
 from typing import List, Optional, Dict
 
+from torchrec.mysettings import (
+    NP_WEIGHT_INIT
+)
+
 import torch
 from torch import nn
 from torchrec.modules.embedding_modules import EmbeddingBagCollection
@@ -294,19 +298,20 @@ class OverArch(nn.Module):
         n = layer_sizes[-2]
         m = layer_sizes[-1]
         LL = nn.Linear(int(n), int(m), bias=True, device=device)
-        import numpy as np
-        np.random.seed(0)
-        mean = 0.0  # std_dev = np.sqrt(variance)
-        std_dev = np.sqrt(2 / (m + n))  # np.sqrt(1 / m) # np.sqrt(1 / n)
-        W = np.random.normal(mean, std_dev, size=(m, n)).astype(np.float32)
-        std_dev = np.sqrt(1 / m)  # np.sqrt(2 / (m + 1))
-        bt = np.random.normal(mean, std_dev, size=m).astype(np.float32)
-        #LL.weight.data = torch.tensor(W,device=device)
-        LL.weight.data.copy_(torch.tensor(W))
-        LL.weight.requires_grad = True
-        #LL.bias.data = torch.tensor(bt,device=device)
-        LL.bias.data.copy_(torch.tensor(bt))
-        LL.bias.requires_grad = True        
+        if NP_WEIGHT_INIT:
+            import numpy as np
+            np.random.seed(0)
+            mean = 0.0  # std_dev = np.sqrt(variance)
+            std_dev = np.sqrt(2 / (m + n))  # np.sqrt(1 / m) # np.sqrt(1 / n)
+            W = np.random.normal(mean, std_dev, size=(m, n)).astype(np.float32)
+            std_dev = np.sqrt(1 / m)  # np.sqrt(2 / (m + 1))
+            bt = np.random.normal(mean, std_dev, size=m).astype(np.float32)
+            #LL.weight.data = torch.tensor(W,device=device)
+            LL.weight.data.copy_(torch.tensor(W))
+            LL.weight.requires_grad = True
+            #LL.bias.data = torch.tensor(bt,device=device)
+            LL.bias.data.copy_(torch.tensor(bt))
+            LL.bias.requires_grad = True        
 
         self.model: nn.Module = nn.Sequential(
             MLP(

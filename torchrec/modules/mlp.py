@@ -7,6 +7,10 @@
 
 from typing import Callable, List, Optional, Union
 
+from torchrec.mysettings import (
+    NP_WEIGHT_INIT
+)
+
 import torch
 from torch import nn
 from torchrec.modules.activation import SwishLayerNorm
@@ -58,22 +62,22 @@ class Perceptron(torch.nn.Module):
         self._linear: nn.Linear = nn.Linear(
             self._in_size, self._out_size, bias=bias, device=device
         )
-
-        n = self._in_size
-        m = self._out_size
-        import numpy as np
-        np.random.seed(0)
-        mean = 0.0  # std_dev = np.sqrt(variance)
-        std_dev = np.sqrt(2 / (m + n))  # np.sqrt(1 / m) # np.sqrt(1 / n)
-        W = np.random.normal(mean, std_dev, size=(m, n)).astype(np.float32)
-        std_dev = np.sqrt(1 / m)  # np.sqrt(2 / (m + 1))
-        bt = np.random.normal(mean, std_dev, size=m).astype(np.float32)
-        #self._linear.weight.data = torch.tensor(W,device=device)
-        self._linear.weight.data.copy_(torch.tensor(W))
-        self._linear.weight.requires_grad = True
-        #self._linear.bias.data = torch.tensor(bt,device=device)
-        self._linear.bias.data.copy_(torch.tensor(bt))
-        self._linear.bias.requires_grad = True
+        if NP_WEIGHT_INIT:
+            n = self._in_size
+            m = self._out_size
+            import numpy as np
+            np.random.seed(0)
+            mean = 0.0  # std_dev = np.sqrt(variance)
+            std_dev = np.sqrt(2 / (m + n))  # np.sqrt(1 / m) # np.sqrt(1 / n)
+            W = np.random.normal(mean, std_dev, size=(m, n)).astype(np.float32)
+            std_dev = np.sqrt(1 / m)  # np.sqrt(2 / (m + 1))
+            bt = np.random.normal(mean, std_dev, size=m).astype(np.float32)
+            #self._linear.weight.data = torch.tensor(W,device=device)
+            self._linear.weight.data.copy_(torch.tensor(W))
+            self._linear.weight.requires_grad = True
+            #self._linear.bias.data = torch.tensor(bt,device=device)
+            self._linear.bias.data.copy_(torch.tensor(bt))
+            self._linear.bias.requires_grad = True
 
         self._activation_fn: Callable[[torch.Tensor], torch.Tensor] = activation
 
