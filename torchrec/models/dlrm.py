@@ -15,6 +15,36 @@ from torchrec.sparse.jagged_tensor import (
     KeyedJaggedTensor,
     KeyedTensor,
 )
+import torchrec.mysettings as mysettings
+from torchrec.mysettings import (
+    ARGV,
+    INT_FEATURE_COUNT,
+    CAT_FEATURE_COUNT,
+    DAYS,
+    SETTING,
+    LOG_FILE,
+    BATCH_SIZE,
+    LN_EMB,
+    DENSE_LOG_FILE,
+    SPARSE_LOG_FILE,
+    D_OUT_LOG_FILE,
+    E_OUT_LOG_FILE,
+    C_OUT_LOG_FILE,
+    SAVE_DEBUG_DATA,
+)
+
+def SAVE_DEBUG_DATA(t, FILE):
+    if SAVE_DEBUG_DATA:
+        try:
+            t = torch.trunc(t.flatten().detach().cpu()*1000)
+            log = open(FILE, "a")
+            line = t.shape.__repr__() + "\n"
+            log.write(line)
+            line = '\n'.join([str(x) for x in t.flatten().detach().cpu().numpy().tolist()]) + "\n\n"
+            log.write(line)
+            log.close()
+        except:
+            pass
 
 
 def choose(n: int, k: int) -> int:
@@ -219,7 +249,8 @@ class InteractionArch(nn.Module):
         
         #combined_values = torch.cat((dense_features.unsqueeze(0), sparse_features.reshape(-1, B, D)), dim=1).view((B, -1, D))
 
-        combined_values = torch.cat((dense_features.unsqueeze(0).transpose(0,1), sparse_features.reshape(-1, B, D).transpose(0,1)), dim=1).view((B, -1, D))
+        combined_values = torch.cat(
+            (dense_features.unsqueeze(0).transpose(0,1), sparse_features.reshape(-1, B, D).transpose(0,1)), dim=1).view((B, -1, D))
 
         #torch.stack([t for t in combined_values.transpose(1,0)])
         #combined_values = combined_values.transpose(0,1)        
@@ -431,11 +462,30 @@ class DLRM(nn.Module):
         Returns:
             torch.Tensor:
         """
-        embedded_dense = self.dense_arch(dense_features) #outputs shape 2048, 128
-        #sparse_features._values.copy_(torch.cat(torch.tensor([sparse_features._values[k::ndevices] for k in range(ndevices)])))
-        embedded_sparse = self.sparse_arch(sparse_features) #outputs shape torch.Size([2048, 26, 128])
+
+        SAVE_DEBUG_DATA(dense_features, DENSE_LOG_FILE)
+        SAVE_DEBUG_DATA(sparse_features._values, SPARSE_LOG_FILE)
+
+        embedded_dense = self.dense_arch(dense_features)
+        embedded_sparse = self.sparse_arch(sparse_features)
+
+        SAVE_DEBUG_DATA(embedded_dense, D_OUT_LOG_FILE)
+        SAVE_DEBUG_DATA(embedded_sparse, E_OUT_LOG_FILE)
+
         concatenated_dense = self.inter_arch(
             dense_features=embedded_dense, sparse_features=embedded_sparse
         )
+
+        SAVE_DEBUG_DATA(concatenated_dense, C_OUT_LOG_FILE)
+
         logits = self.over_arch(concatenated_dense)
         return logits
+
+
+
+
+
+        #self.losseslog = open(LOG_FILE, "a")
+        #line = str(losses.detach().cpu().numpy().tolist()) + "\n"
+        #self.losseslog.write(line)
+        #self.losseslog.close() 

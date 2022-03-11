@@ -27,7 +27,8 @@ from torchrec.mysettings import (
     DAYS,
     SETTING,
     LOG_FILE,
-    BATCH_SIZE
+    BATCH_SIZE,
+    LN_EMB,
 )
 
 import numpy as np
@@ -346,9 +347,9 @@ class BinaryCriteoUtils:
 
     @staticmethod
     def load_npy_range(
-        fname: str, #'/home/ubuntu/mountpoint/criteo/1tb_numpy/day_0_dense.npy'
+        fname: str,
         start_row: int,
-        num_rows: int, #195841983
+        num_rows: int,
         path_manager_key: str = PATH_MANAGER_KEY,
     ) -> np.ndarray:
         """
@@ -422,12 +423,12 @@ class BinaryCriteoUtils:
             if SETTING == 3:
                 fake_file_num_entries = BATCH_SIZE*100
                 if '_cat' in fname:
-                    #data = np.array([ (np.arange(CAT_FEATURE_COUNT) + _) % BATCH_SIZE for _ in range(fake_file_num_entries)])
-                    #data = np.array([ np.zeros((CAT_FEATURE_COUNT)) for _ in range(fake_file_num_entries)])
                     np.random.seed(0)
-                    r = np.random.uniform(0.0, 0.99, size=(BATCH_SIZE, CAT_FEATURE_COUNT))*12
-                    r = np.trunc(r).astype(np.float32)
-                    #r[:,:]=0
+                    r = np.random.uniform(0.0, 0.99, size=(BATCH_SIZE, CAT_FEATURE_COUNT))
+                    for i in range(BATCH_SIZE):
+                        for j in range(CAT_FEATURE_COUNT):
+                            r[i,j] = r[i,j] * LN_EMB[j]
+                    r = np.trunc(r).astype(np.int32)
                     data = np.concatenate([r for _ in range(100)], axis=0)
                 #elif '_int' in fname:
                 #    data = ((np.arange(fake_file_num_entries)) % BATCH_SIZE).astype(np.float32)[:, np.newaxis]
