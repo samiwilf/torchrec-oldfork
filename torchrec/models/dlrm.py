@@ -34,7 +34,7 @@ from torchrec.mysettings import (
 )
 
 def SAVE_DEBUG_DATA(t, FILE):
-    if SAVE_DEBUG_DATA:
+    if mysettings.SAVE_DEBUG_DATA:
         try:
             t = torch.trunc(t.flatten().detach().cpu()*1000)
             log = open(FILE, "a")
