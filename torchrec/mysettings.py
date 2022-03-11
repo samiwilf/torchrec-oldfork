@@ -25,10 +25,11 @@ if SETTING == 1:
     INT_FEATURE_COUNT = 1
     DAYS = 1
     BATCH_SIZE = 1
+    EMB_DIM = 4
     LN_EMB=[1] 
     ARGV = [  
-        '--embedding_dim', '4', 
-        '--dense_arch_layer_sizes', '4', 
+        '--embedding_dim', f'{EMB_DIM}', 
+        '--dense_arch_layer_sizes', f'{EMB_DIM}', 
         '--over_arch_layer_sizes', '1,1', 
     ]
 
@@ -37,10 +38,11 @@ if SETTING == 2:
     INT_FEATURE_COUNT = 1
     DAYS = 1
     BATCH_SIZE = 8388608
+    EMB_DIM = 4
     LN_EMB=[1]
     ARGV = [ 
-        '--embedding_dim', '4', 
-        '--dense_arch_layer_sizes', '4', 
+        '--embedding_dim', f'{EMB_DIM}', 
+        '--dense_arch_layer_sizes', f'{EMB_DIM}', 
         '--over_arch_layer_sizes', '1,1', 
     ]
 
@@ -50,11 +52,12 @@ if SETTING == 3:
     INT_FEATURE_COUNT = 1 
     DAYS = 1
     BATCH_SIZE = 2048
-    #LN_EMB=[16,21,34,18,13]
-    LN_EMB=[4538,346,175]
+    EMB_DIM = 128
+    LN_EMB=[16,21,34,18,13]
+    #LN_EMB=[4538,346,175]
     ARGV = [ 
-        '--embedding_dim', '128', 
-        '--dense_arch_layer_sizes', '512,256,128', 
+        '--embedding_dim', f'{EMB_DIM}', 
+        '--dense_arch_layer_sizes', f'512,256,{EMB_DIM}', 
         '--over_arch_layer_sizes', '1024,1024,512,256,1', 
     ]
 
@@ -64,10 +67,11 @@ if SETTING == 4:
     INT_FEATURE_COUNT = 13
     DAYS = 1
     BATCH_SIZE = 2048 
+    EMB_DIM = 128
     LN_EMB=[45833188,36746,17245,7413,20243,3,7114,1441,62,29275261,1572176,345138,10,2209,11267,128,4,974,14,48937457,11316796,40094537,452104,12606,104,35]
     ARGV = [ 
-        '--embedding_dim', '128', 
-        '--dense_arch_layer_sizes', '512,256,128', 
+        '--embedding_dim', f'{EMB_DIM}', 
+        '--dense_arch_layer_sizes', f'512,256,{EMB_DIM}', 
         '--over_arch_layer_sizes', '1024,1024,512,256,1', 
         "--num_embeddings", '40000000',
     ]
@@ -79,11 +83,12 @@ if SETTING == 5:
     INT_FEATURE_COUNT = 13
     #CAT_FEATURE_COUNT = 26 
     DAYS = 24
-    BATCH_SIZE = 2048 
+    BATCH_SIZE = 2048
+    EMB_DIM = 128
     LN_EMB=[45833188,36746,17245,7413,20243,3,7114,1441,62,29275261,1572176,345138,10,2209,11267,128,4,974,14,48937457,11316796,40094537,452104,12606,104,35]
     ARGV = [ 
-        '--embedding_dim', '128', 
-        '--dense_arch_layer_sizes', '512,256,128', 
+        '--embedding_dim', f'{EMB_DIM}', 
+        '--dense_arch_layer_sizes', f'512,256,{EMB_DIM}', 
         '--over_arch_layer_sizes', '1024,1024,512,256,1',
         "--num_embeddings", '40000000',
     ]
