@@ -67,7 +67,7 @@ if SETTING == 4:
         '--embedding_dim', '128', 
         '--dense_arch_layer_sizes', '512,256,128', 
         '--over_arch_layer_sizes', '1024,1024,512,256,1', 
-        "--max_ind_size", '40000000',
+        "--num_embeddings", '40000000',
     ]
 
 if SETTING == 5:
