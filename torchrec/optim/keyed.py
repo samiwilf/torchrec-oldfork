@@ -249,7 +249,7 @@ class CombinedOptimizer(KeyedOptimizer):
             if isinstance(key_value, KeyedOptimizer):
                 key_value = ("", key_value)
             self._optims.append(key_value)
-
+        # fuse tw and rw
         all_keys: Set[str] = set()
         self.defaults["_save_param_groups"] = (
             False

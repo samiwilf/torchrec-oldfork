@@ -241,7 +241,7 @@ class ShardedEmbeddingBagCollection(
         fused_params: Optional[Dict[str, Any]] = None,
         device: Optional[torch.device] = None,
     ) -> None:
-        super().__init__()
+        super().__init__() #HERRREEE
         sharding_type_to_embedding_configs = create_embedding_configs_by_sharding(
             module, table_name_to_parameter_sharding, "embedding_bags."
         )
@@ -281,7 +281,7 @@ class ShardedEmbeddingBagCollection(
                         params["embedding_bags." + param_key] = weight
                     module.fused_optimizer.params = params
                     optims.append(("", module.fused_optimizer))
-        self._optim: CombinedOptimizer = CombinedOptimizer(optims)
+        self._optim: CombinedOptimizer = CombinedOptimizer(optims) ## cat_0 emb bag param is here!!!!
 
     def _create_input_dist(
         self,
@@ -495,7 +495,7 @@ class EmbeddingBagCollectionSharder(BaseEmbeddingSharder[M]):
     This implementation uses non-fused `EmbeddingBagCollection`
     """
 
-    def shard(
+    def shard(  #BUG HERE
         self,
         module: EmbeddingBagCollection,
         params: Dict[str, ParameterSharding],

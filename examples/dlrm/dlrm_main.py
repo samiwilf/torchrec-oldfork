@@ -22,7 +22,7 @@ from torchrec.datasets.utils import Batch
 from torchrec.distributed import TrainPipelineSparseDist
 from torchrec.distributed.model_parallel import DistributedModelParallel
 from torchrec.modules.embedding_configs import EmbeddingBagConfig
-from torchrec.optim.keyed import KeyedOptimizerWrapper
+from torchrec.optim.keyed import KeyedOptimizerWrapper, CombinedOptimizer
 from tqdm import tqdm
 
 from torchrec.mysettings import (
@@ -417,6 +417,9 @@ def main(argv: List[str]) -> None:
         dict(model.named_parameters()),
         lambda params: torch.optim.SGD(params, lr=args.learning_rate),
     )
+    for pg in model.fused_optimizer.param_groups:
+        pg['lr']=args.learning_rate
+    optimizer = CombinedOptimizer([model.fused_optimizer, optimizer])
 
     train_pipeline = TrainPipelineSparseDist(
         model,

@@ -53,8 +53,8 @@ if SETTING == 3:
     DAYS = 1
     BATCH_SIZE = 2048
     EMB_DIM = 128
-    LN_EMB=[16,21,34,18,13]
-    #LN_EMB=[4538,346,175]
+    #LN_EMB=[16,21,34,18,13]
+    LN_EMB=[4538,346,175]
     ARGV = [ 
         '--embedding_dim', f'{EMB_DIM}', 
         '--dense_arch_layer_sizes', f'512,256,{EMB_DIM}', 
