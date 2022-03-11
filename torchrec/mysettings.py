@@ -102,7 +102,7 @@ COMMON_ARGV = [
     '--learning_rate', '1.0',
 ]
 
-if SETTING != 5:
+if SETTING != 5 and SETTING != 4:
     COMMON_ARGV += ['--limit_train_batches', '50'] #, '--limit_val_batches', '5', '--limit_test_batches', '5']
 
 ARGV = ARGV + COMMON_ARGV
