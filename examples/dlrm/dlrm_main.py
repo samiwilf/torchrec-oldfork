@@ -360,6 +360,9 @@ def main(argv: List[str]) -> None:
     if not torch.distributed.is_initialized():
         dist.init_process_group(backend=backend)
 
+    if dist.get_rank() == 0:
+        print(argv)        
+
     if args.num_embeddings_per_feature is not None:
         args.num_embeddings_per_feature = list(
             map(int, args.num_embeddings_per_feature.split(","))
