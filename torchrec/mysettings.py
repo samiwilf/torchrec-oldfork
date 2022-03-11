@@ -1,10 +1,11 @@
 # DLRM run command: 
 # torchx run -s local_cwd dist.ddp -j 1x1 --script dlrm_main.py
+# torchx run -s local_cwd  aws_component.py:run_dlrm_main --num_trainers=8
 
 import pathlib
 
 LOG_PATH = "/home/ubuntu/repos/torchrec-fork/examples/dlrm/"
-SETTING = 4
+SETTING = 3
 print('*'.center(40, '*'))
 print(f"  RUNNING SETTING {SETTING}  ".center(40, '*'))
 print('*'.center(40, '*'))
@@ -44,12 +45,13 @@ if SETTING == 2:
     ]
 
 if SETTING == 3:
+    SAVE_DEBUG_DATA = False
     LOG_FILE = "s3.txt" 
     INT_FEATURE_COUNT = 1 
     DAYS = 1
     BATCH_SIZE = 2048
     #LN_EMB=[16,21,34,18,13]
-    LN_EMB=[45833188,36746,17245]
+    LN_EMB=[4538,346,175]
     ARGV = [ 
         '--embedding_dim', '128', 
         '--dense_arch_layer_sizes', '512,256,128', 
@@ -101,7 +103,7 @@ COMMON_ARGV = [
 ]
 
 if SETTING != 5:
-    COMMON_ARGV += ['--limit_train_batches', '5', '--limit_val_batches', '5', '--limit_test_batches', '5']
+    COMMON_ARGV += ['--limit_train_batches', '50'] #, '--limit_val_batches', '5', '--limit_test_batches', '5']
 
 ARGV = ARGV + COMMON_ARGV
 
