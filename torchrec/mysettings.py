@@ -5,7 +5,7 @@
 import pathlib
 
 LOG_PATH = "/home/ubuntu/repos/torchrec-fork/examples/dlrm/"
-SETTING = 5
+SETTING = 4
 print('*'.center(40, '*'))
 print(f"  RUNNING SETTING {SETTING}  ".center(40, '*'))
 print('*'.center(40, '*'))
@@ -13,7 +13,8 @@ print('*'.center(40, '*'))
 #Defaults, may be overwritten by settings below.
 MODEL_EVAL = False
 SAVE_DEBUG_DATA = True
-NP_WEIGHT_INIT = False
+SAVE_LOSSES = True
+NP_WEIGHT_INIT = True
 
 DENSE_LOG_FILE = pathlib.Path(LOG_PATH + "s" + str(SETTING) + "_DENSE.txt")
 SPARSE_LOG_FILE = pathlib.Path(LOG_PATH + "s" + str(SETTING) + "_SPARSE.txt")
@@ -64,6 +65,9 @@ if SETTING == 3:
 
 if SETTING == 4:
     SAVE_DEBUG_DATA = False
+    SAVE_LOSSES = True
+    MODEL_EVAL = True
+    NP_WEIGHT_INIT = True
     LOG_FILE = "s4.txt"
     INT_FEATURE_COUNT = 13
     DAYS = 1
@@ -79,7 +83,9 @@ if SETTING == 4:
 
 if SETTING == 5:
     SAVE_DEBUG_DATA = False
+    SAVE_LOSSES = False
     MODEL_EVAL = True
+    NP_WEIGHT_INIT = True
     LOG_FILE = "s5_losses_terabyte_full.txt"
     INT_FEATURE_COUNT = 13
     #CAT_FEATURE_COUNT = 26 

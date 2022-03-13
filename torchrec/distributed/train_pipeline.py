@@ -21,6 +21,7 @@ from typing import (
     Set,
 )
 
+import torchrec.mysettings as mysettings
 from torchrec.mysettings import (
     ARGV,
     INT_FEATURE_COUNT,
@@ -151,7 +152,7 @@ class TrainPipelineBase(TrainPipeline[In, Out]):
 
         # Update
         if self._model.training:
-            if SETTING != 5:
+            if mysettings.SAVE_LOSSES != 5:
                 self.losseslog = open(LOG_FILE, "a")
                 line = str(losses.detach().cpu().numpy().tolist()) + "\n"
                 self.losseslog.write(line)
@@ -527,7 +528,7 @@ class TrainPipelineSparseDist(TrainPipeline[In, Out]):
                 _start_data_dist(self._pipelined_modules, batch_ip1, self._context)
 
         if self._model.training:
-            if SETTING != 5:
+            if mysettings.SAVE_LOSSES != 5:
                 self.losseslog = open(LOG_FILE, "a")
                 line = str(losses.detach().cpu().numpy().tolist()) + "\n"
                 self.losseslog.write(line)
