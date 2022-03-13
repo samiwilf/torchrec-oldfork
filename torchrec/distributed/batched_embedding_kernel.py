@@ -12,6 +12,10 @@ import logging
 from dataclasses import dataclass
 from typing import List, Optional, Dict, Any, Union, Tuple, cast, Iterator
 
+from torchrec.mysettings import (
+    NP_WEIGHT_INIT
+)
+
 import torch
 import torch.distributed as dist
 from fbgemm_gpu.split_table_batched_embeddings_ops import (

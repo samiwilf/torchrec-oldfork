@@ -13,6 +13,7 @@ print('*'.center(40, '*'))
 #Defaults, may be overwritten by settings below.
 MODEL_EVAL = False
 SAVE_DEBUG_DATA = True
+NP_WEIGHT_INIT = False
 
 DENSE_LOG_FILE = pathlib.Path(LOG_PATH + "s" + str(SETTING) + "_DENSE.txt")
 SPARSE_LOG_FILE = pathlib.Path(LOG_PATH + "s" + str(SETTING) + "_SPARSE.txt")
@@ -109,6 +110,8 @@ COMMON_ARGV = [
 
 if SETTING != 5 and SETTING != 4:
     COMMON_ARGV += ['--limit_train_batches', '50'] #, '--limit_val_batches', '5', '--limit_test_batches', '5']
+#COMMON_ARGV += ['--limit_train_batches', '256055', '--limit_val_batches', '5441', '--limit_test_batches', '5431']
+
 
 ARGV = ARGV + COMMON_ARGV
 
