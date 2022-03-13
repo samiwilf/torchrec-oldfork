@@ -1,5 +1,5 @@
 # DLRM run command: 
-# torchx run -s local_cwd dist.ddp -j 1x1 --script dlrm_main.py
+# torchx run -s local_cwd dist.ddp -j 1x8 --script dlrm_main.py
 # torchx run -s local_cwd  aws_component.py:run_dlrm_main --num_trainers=8
 
 import pathlib

@@ -30,6 +30,7 @@ from torchrec.mysettings import (
     SETTING,
     LOG_FILE,
 )
+from torch import distributed as dist
 
 import torch
 from torch.autograd.profiler import record_function
@@ -152,7 +153,7 @@ class TrainPipelineBase(TrainPipeline[In, Out]):
 
         # Update
         if self._model.training:
-            if mysettings.SAVE_LOSSES != 5:
+            if mysettings.SAVE_LOSSES and dist.get_rank() == 0:
                 self.losseslog = open(LOG_FILE, "a")
                 line = str(losses.detach().cpu().numpy().tolist()) + "\n"
                 self.losseslog.write(line)
@@ -528,7 +529,7 @@ class TrainPipelineSparseDist(TrainPipeline[In, Out]):
                 _start_data_dist(self._pipelined_modules, batch_ip1, self._context)
 
         if self._model.training:
-            if mysettings.SAVE_LOSSES != 5:
+            if mysettings.SAVE_LOSSES and dist.get_rank() == 0:
                 self.losseslog = open(LOG_FILE, "a")
                 line = str(losses.detach().cpu().numpy().tolist()) + "\n"
                 self.losseslog.write(line)
