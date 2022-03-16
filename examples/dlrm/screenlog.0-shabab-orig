@@ -1,0 +1,157 @@
+[01;32mubuntu@ip-172-31-36-159[00m:[01;34m~/repos/torchrec-fork/examples/dlrm[00m$ conda activate torchrec
+(torchrec) [01;32mubuntu@ip-172-31-36-159[00m:[01;34m~/repos/torchrec-fork/examples/dlrm[00m$ conda activate torchrec[14Pscreen -rtorchx run -s local_cwd  aws_component.py:run_dlrm_main --num_trainers=8
+[38:2:238:76:44mtorchx[0m [2m2022-03-11 19:04:42 INFO    [0m Log files located in: /tmp/torchx_274p45n4/torchx/train_dlrm-gssmf6tr29vgs/trainer/0
+local_cwd://torchx/train_dlrm-gssmf6tr29vgs
+[38:2:238:76:44mtorchx[0m [2m2022-03-11 19:04:42 INFO    [0m Waiting for the app to finish...
+[32mtrainer/0[0m WARNING:__main__:
+[32mtrainer/0[0m *****************************************
+[32mtrainer/0[0m Setting OMP_NUM_THREADS environment variable for each process to be 1 in default, to avoid your system being overloaded, please further tune the variable for optimal performance in your application as needed. 
+[32mtrainer/0[0m *****************************************
+[32mtrainer/0[0m [W socket.cpp:701] The server socket on [ip-172-31-36-159.ec2.internal]:33545 is not yet listening (errno: 111 - Connection refused), will retry.
+[32mtrainer/0[0m [W socket.cpp:701] The server socket on [ip-172-31-36-159.ec2.internal]:33545 is not yet listening (errno: 111 - Connection refused), will retry.
+[32mtrainer/0[0m [W socket.cpp:701] The server socket on [ip-172-31-36-159.ec2.internal]:33545 is not yet listening (errno: 111 - Connection refused), will retry.
+[32mtrainer/0[0m [W socket.cpp:701] The server socket on [ip-172-31-36-159.ec2.internal]:33545 is not yet listening (errno: 111 - Connection refused), will retry.
+[32mtrainer/0[0m [W socket.cpp:701] The server socket on [ip-172-31-36-159.ec2.internal]:33545 is not yet listening (errno: 111 - Connection refused), will retry.
+[32mtrainer/0[0m [W socket.cpp:701] The server socket on [ip-172-31-36-159.ec2.internal]:33545 is not yet listening (errno: 111 - Connection refused), will retry.
+[32mtrainer/0[0m [W socket.cpp:701] The server socket on [ip-172-31-36-159.ec2.internal]:33545 is not yet listening (errno: 111 - Connection refused), will retry.
+[32mtrainer/0[0m ['--num_embeddings', '40000000', '--pin_memory', '--batch_size', '2048', '--epochs', '1', '--num_embeddings_per_feature', '45833188,36746,17245,7413,20243,3,7114,1441,62,29275261,1572176,345138,10,2209,11267,128,4,974,14,48937457,11316796,40094537,452104,12606,104,35', '--embedding_dim', '128', '--dense_arch_layer_sizes', '512,256,128', '--over_arch_layer_sizes', '1024,1024,512,256,1', '--in_memory_binary_criteo_path', '/home/ubuntu/mountpoint/1tb_numpy/', '--learning_rate', '1.0']
+[32mtrainer/0[0m Traceback (most recent call last):
+[32mtrainer/0[0m Traceback (most recent call last):
+[32mtrainer/0[0m   File "/home/ubuntu/repos/torchrec-fork/examples/dlrm/dlrm_main.py", line 428, in <module>
+[32mtrainer/0[0m Traceback (most recent call last):
+[32mtrainer/0[0m   File "/home/ubuntu/repos/torchrec-fork/examples/dlrm/dlrm_main.py", line 428, in <module>
+[32mtrainer/0[0m Traceback (most recent call last):
+[32mtrainer/0[0m   File "/home/ubuntu/repos/torchrec-fork/examples/dlrm/dlrm_main.py", line 428, in <module>
+[32mtrainer/0[0m Traceback (most recent call last):
+[32mtrainer/0[0m   File "/home/ubuntu/repos/torchrec-fork/examples/dlrm/dlrm_main.py", line 428, in <module>
+[32mtrainer/0[0m Traceback (most recent call last):
+[32mtrainer/0[0m   File "/home/ubuntu/repos/torchrec-fork/examples/dlrm/dlrm_main.py", line 428, in <module>
+[32mtrainer/0[0m   File "/home/ubuntu/repos/torchrec-fork/examples/dlrm/dlrm_main.py", line 428, in <module>
+[32mtrainer/0[0m Traceback (most recent call last):
+[32mtrainer/0[0m   File "/home/ubuntu/repos/torchrec-fork/examples/dlrm/dlrm_main.py", line 428, in <module>
+[32mtrainer/0[0m Traceback (most recent call last):
+[32mtrainer/0[0m   File "/home/ubuntu/repos/torchrec-fork/examples/dlrm/dlrm_main.py", line 428, in <module>
+[32mtrainer/0[0m         main(sys.argv[1:])    
+[32mtrainer/0[0m     main(sys.argv[1:])        main(sys.argv[1:])  File "/home/ubuntu/repos/torchrec-fork/examples/dlrm/dlrm_main.py", line 414, in main
+[32mtrainer/0[0m main(sys.argv[1:])
+[32mtrainer/0[0m main(sys.argv[1:])main(sys.argv[1:])
+[32mtrainer/0[0m 
+[32mtrainer/0[0m   File "/home/ubuntu/repos/torchrec-fork/examples/dlrm/dlrm_main.py", line 414, in main
+[32mtrainer/0[0m 
+[32mtrainer/0[0m 
+[32mtrainer/0[0m   File "/home/ubuntu/repos/torchrec-fork/examples/dlrm/dlrm_main.py", line 414, in main
+[32mtrainer/0[0m   File "/home/ubuntu/repos/torchrec-fork/examples/dlrm/dlrm_main.py", line 414, in main
+[32mtrainer/0[0m   File "/home/ubuntu/repos/torchrec-fork/examples/dlrm/dlrm_main.py", line 414, in main
+[32mtrainer/0[0m   File "/home/ubuntu/repos/torchrec-fork/examples/dlrm/dlrm_main.py", line 414, in main
+[32mtrainer/0[0m     main(sys.argv[1:])    
+[32mtrainer/0[0m     main(sys.argv[1:])optimizer = CombinedOptimizer([model.fused_optimizer, optimizer])          File "/home/ubuntu/repos/torchrec-fork/examples/dlrm/dlrm_main.py", line 414, in main
+[32mtrainer/0[0m     
+[32mtrainer/0[0m optimizer = CombinedOptimizer([model.fused_optimizer, optimizer])        
+[32mtrainer/0[0m         optimizer = CombinedOptimizer([model.fused_optimizer, optimizer])    
+[32mtrainer/0[0m   File "/home/ubuntu/repos/torchrec-fork/examples/dlrm/dlrm_main.py", line 414, in main
+[32mtrainer/0[0m optimizer = CombinedOptimizer([model.fused_optimizer, optimizer])    NameErroroptimizer = CombinedOptimizer([model.fused_optimizer, optimizer])    optimizer = CombinedOptimizer([model.fused_optimizer, optimizer])    
+[32mtrainer/0[0m NameError
+[32mtrainer/0[0m : 
+[32mtrainer/0[0m 
+[32mtrainer/0[0m : name 'CombinedOptimizer' is not definedNameErrorname 'CombinedOptimizer' is not definedNameError
+[32mtrainer/0[0m : NameError
+[32mtrainer/0[0m NameError: name 'CombinedOptimizer' is not defined: : name 'CombinedOptimizer' is not defined
+[32mtrainer/0[0m name 'CombinedOptimizer' is not definedname 'CombinedOptimizer' is not defined
+[32mtrainer/0[0m 
+[32mtrainer/0[0m 
+[32mtrainer/0[0m     optimizer = CombinedOptimizer([model.fused_optimizer, optimizer])    
+[32mtrainer/0[0m     optimizer = CombinedOptimizer([model.fused_optimizer, optimizer])    NameError
+[32mtrainer/0[0m : name 'CombinedOptimizer' is not defined
+[32mtrainer/0[0m NameError: name 'CombinedOptimizer' is not defined
+[32mtrainer/0[0m ERROR:torch.distributed.elastic.multiprocessing.api:failed (exitcode: 1) local_rank: 0 (pid: 1060282) of binary: /home/ubuntu/anaconda3/envs/torchrec/bin/python
+[32mtrainer/0[0m Traceback (most recent call last):
+[32mtrainer/0[0m   File "/home/ubuntu/anaconda3/envs/torchrec/lib/python3.8/runpy.py", line 194, in _run_module_as_main
+[32mtrainer/0[0m     return _run_code(code, main_globals, None,
+[32mtrainer/0[0m   File "/home/ubuntu/anaconda3/envs/torchrec/lib/python3.8/runpy.py", line 87, in _run_code
+[32mtrainer/0[0m     exec(code, run_globals)
+[32mtrainer/0[0m   File "/home/ubuntu/anaconda3/envs/torchrec/lib/python3.8/site-packages/torch/distributed/run.py", line 728, in <module>
+[32mtrainer/0[0m     main()
+[32mtrainer/0[0m   File "/home/ubuntu/anaconda3/envs/torchrec/lib/python3.8/site-packages/torch/distributed/elastic/multiprocessing/errors/__init__.py", line 345, in wrapper
+[32mtrainer/0[0m     return f(*args, **kwargs)
+[32mtrainer/0[0m   File "/home/ubuntu/anaconda3/envs/torchrec/lib/python3.8/site-packages/torch/distributed/run.py", line 724, in main
+[32mtrainer/0[0m     run(args)
+[32mtrainer/0[0m   File "/home/ubuntu/anaconda3/envs/torchrec/lib/python3.8/site-packages/torch/distributed/run.py", line 715, in run
+[32mtrainer/0[0m     elastic_launch(
+[32mtrainer/0[0m   File "/home/ubuntu/anaconda3/envs/torchrec/lib/python3.8/site-packages/torch/distributed/launcher/api.py", line 131, in __call__
+[32mtrainer/0[0m     return launch_agent(self._config, self._entrypoint, list(args))
+[32mtrainer/0[0m   File "/home/ubuntu/anaconda3/envs/torchrec/lib/python3.8/site-packages/torch/distributed/launcher/api.py", line 245, in launch_agent
+[32mtrainer/0[0m     raise ChildFailedError(
+[32mtrainer/0[0m torch.distributed.elastic.multiprocessing.errors.ChildFailedError: 
+[32mtrainer/0[0m ============================================================
+[32mtrainer/0[0m /home/ubuntu/repos/torchrec-fork/examples/dlrm/dlrm_main.py FAILED
+[32mtrainer/0[0m ------------------------------------------------------------
+[32mtrainer/0[0m Failures:
+[32mtrainer/0[0m [1]:
+[32mtrainer/0[0m   time      : 2022-03-11_19:48:06
+[32mtrainer/0[0m   host      : ip-172-31-36-159.ec2.internal
+[32mtrainer/0[0m   rank      : 1 (local_rank: 1)
+[32mtrainer/0[0m   exitcode  : 1 (pid: 1060283)
+[32mtrainer/0[0m   error_file: <N/A>
+[32mtrainer/0[0m   traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+[32mtrainer/0[0m [2]:
+[32mtrainer/0[0m   time      : 2022-03-11_19:48:06
+[32mtrainer/0[0m   host      : ip-172-31-36-159.ec2.internal
+[32mtrainer/0[0m   rank      : 2 (local_rank: 2)
+[32mtrainer/0[0m   exitcode  : 1 (pid: 1060284)
+[32mtrainer/0[0m   error_file: <N/A>
+[32mtrainer/0[0m   traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+[32mtrainer/0[0m [3]:
+[32mtrainer/0[0m   time      : 2022-03-11_19:48:06
+[32mtrainer/0[0m   host      : ip-172-31-36-159.ec2.internal
+[32mtrainer/0[0m   rank      : 3 (local_rank: 3)
+[32mtrainer/0[0m   exitcode  : 1 (pid: 1060285)
+[32mtrainer/0[0m   error_file: <N/A>
+[32mtrainer/0[0m   traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+[32mtrainer/0[0m [4]:
+[32mtrainer/0[0m   time      : 2022-03-11_19:48:06
+[32mtrainer/0[0m   host      : ip-172-31-36-159.ec2.internal
+[32mtrainer/0[0m   rank      : 4 (local_rank: 4)
+[32mtrainer/0[0m   exitcode  : 1 (pid: 1060286)
+[32mtrainer/0[0m   error_file: <N/A>
+[32mtrainer/0[0m   traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+[32mtrainer/0[0m [5]:
+[32mtrainer/0[0m   time      : 2022-03-11_19:48:06
+[32mtrainer/0[0m   host      : ip-172-31-36-159.ec2.internal
+[32mtrainer/0[0m   rank      : 5 (local_rank: 5)
+[32mtrainer/0[0m   exitcode  : 1 (pid: 1060287)
+[32mtrainer/0[0m   error_file: <N/A>
+[32mtrainer/0[0m   traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+[32mtrainer/0[0m [6]:
+[32mtrainer/0[0m   time      : 2022-03-11_19:48:06
+[32mtrainer/0[0m   host      : ip-172-31-36-159.ec2.internal
+[32mtrainer/0[0m   rank      : 6 (local_rank: 6)
+[32mtrainer/0[0m   exitcode  : 1 (pid: 1060288)
+[32mtrainer/0[0m   error_file: <N/A>
+[32mtrainer/0[0m   traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+[32mtrainer/0[0m [7]:
+[32mtrainer/0[0m   time      : 2022-03-11_19:48:06
+[32mtrainer/0[0m   host      : ip-172-31-36-159.ec2.internal
+[32mtrainer/0[0m   rank      : 7 (local_rank: 7)
+[32mtrainer/0[0m   exitcode  : 1 (pid: 1060289)
+[32mtrainer/0[0m   error_file: <N/A>
+[32mtrainer/0[0m   traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+[32mtrainer/0[0m ------------------------------------------------------------
+[32mtrainer/0[0m Root Cause (first observed failure):
+[32mtrainer/0[0m [0]:
+[32mtrainer/0[0m   time      : 2022-03-11_19:48:06
+[32mtrainer/0[0m   host      : ip-172-31-36-159.ec2.internal
+[32mtrainer/0[0m   rank      : 0 (local_rank: 0)
+[32mtrainer/0[0m   exitcode  : 1 (pid: 1060282)
+[32mtrainer/0[0m   error_file: <N/A>
+[32mtrainer/0[0m   traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+[32mtrainer/0[0m ============================================================
+[38:2:238:76:44mtorchx[0m [2m2022-03-11 19:48:06 INFO    [0m Job finished: FAILED
+[38:2:238:76:44mtorchx[0m [2m2022-03-11 19:48:06 ERROR   [0m AppStatus:
+  msg: <NONE>
+  num_restarts: 0
+  roles: []
+  state: FAILED (5)
+  structured_error_msg: <NONE>
+  ui_url: file:///tmp/torchx_274p45n4/torchx/train_dlrm-gssmf6tr29vgs
+
+(torchrec) [01;32mubuntu@ip-172-31-36-159[00m:[01;34m~/repos/torchrec-fork/examples/dlrm[00m$ 
