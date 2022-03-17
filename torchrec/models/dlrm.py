@@ -4,7 +4,7 @@
 #
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
-
+import math
 from typing import List, Optional, Dict
 
 import torch
@@ -143,6 +143,7 @@ class DenseArch(nn.Module):
         )
         for p in self.model.parameters():
             a, b = len(p.size()), sum(p.size())
+            p.data.normal_(mean=0, std=math.sqrt(a / b))
 
     def forward(self, features: torch.Tensor) -> torch.Tensor:
         """
@@ -259,7 +260,8 @@ class OverArch(nn.Module):
             nn.Linear(layer_sizes[-2], layer_sizes[-1], bias=True, device=device),
         )
         for p in self.model.parameters():
-            a, b = len(p.size()), sum(p.size())        
+            a, b = len(p.size()), sum(p.size())
+            p.data.normal_(mean=0, std=math.sqrt(a / b))      
 
     def forward(self, features: torch.Tensor) -> torch.Tensor:
         """
