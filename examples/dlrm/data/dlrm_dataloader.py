@@ -70,6 +70,9 @@ def _get_in_memory_dataloader(
         )
         world_size = dist.get_world_size() * 2
 
+    npys_list = ["_reordered_int", "_reordered_cat", "_reordered_y"]
+    #if DAYS == 1:
+    #npys_list = ["_0_reordered_int", "_0_reordered_cat", "_0_reordered_y"]
     stage_files: List[List[str]] = [
         sorted(
             map(
@@ -77,7 +80,7 @@ def _get_in_memory_dataloader(
                 filter(lambda s: kind in s, files),
             )
         )
-        for kind in ["dense", "sparse", "labels"]
+        for kind in npys_list
     ]
     dataloader = DataLoader(
         InMemoryBinaryCriteoIterDataPipe(

@@ -37,7 +37,7 @@ from torchrec.sparse.jagged_tensor import KeyedJaggedTensor
 FREQUENCY_THRESHOLD = 3
 INT_FEATURE_COUNT = 13
 CAT_FEATURE_COUNT = 26
-DAYS = 24
+DAYS = 1
 DEFAULT_LABEL_NAME = "label"
 DEFAULT_INT_NAMES: List[str] = [f"int_{idx}" for idx in range(INT_FEATURE_COUNT)]
 DEFAULT_CAT_NAMES: List[str] = [f"cat_{idx}" for idx in range(CAT_FEATURE_COUNT)]
@@ -362,6 +362,8 @@ class BinaryCriteoUtils:
             shape, _order, dtype = np.lib.format.read_array_header_1_0(fin)
             if len(shape) == 2:
                 total_rows, row_size = shape
+            elif len(shape) == 1:
+                total_rows, row_size = shape[0], 1
             else:
                 raise ValueError("Cannot load range for npy with ndim == 2.")
 
@@ -380,6 +382,10 @@ class BinaryCriteoUtils:
             fin.seek(offset, os.SEEK_CUR)
             num_entries = num_rows * row_size
             data = np.fromfile(fin, dtype=dtype, count=num_entries)
+            if dtype == np.float64:
+                data = data.astype(np.float32)
+            if '_int' in fname:
+                data = np.log(data + 1)            
             return data.reshape((num_rows, row_size))
 
     @staticmethod

@@ -216,6 +216,7 @@ def _evaluate(
     for _ in tqdm(iter(int, 1), desc=f"Evaluating {stage} set"):
         try:
             _loss, logits, labels = train_pipeline.progress(combined_iterator)
+            labels = labels.int()
             auroc(logits, labels)
             accuracy(logits, labels)
         except StopIteration:
@@ -334,9 +335,12 @@ def main(argv: List[str]) -> None:
     Returns:
         None.
     """
+    argv = ['--embedding_dim', '128', '--dense_arch_layer_sizes', '512,256,128', '--over_arch_layer_sizes', '1024,1024,512,256,1', '--num_embeddings', '40000000', '--batch_size', '2048', '--num_embeddings_per_feature', '45833188,36746,17245,7413,20243,3,7114,1441,62,29275261,1572176,345138,10,2209,11267,128,4,974,14,48937457,11316796,40094537,452104,12606,104,35', '--epochs', '2', '--in_memory_binary_criteo_path', '/home/ubuntu/mountpoint/criteo_terabyte_subsample0.0_maxind40M', '--pin_memory', '--learning_rate', '1.0']
     args = parse_args(argv)
 
     rank = int(os.environ["LOCAL_RANK"])
+    if rank == 0:
+        print(argv)
     if torch.cuda.is_available():
         device: torch.device = torch.device(f"cuda:{rank}")
         backend = "nccl"
