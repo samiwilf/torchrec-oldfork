@@ -79,6 +79,18 @@ def _get_in_memory_dataloader(
         )
         for kind in ["dense", "sparse", "labels"]
     ]
+    npys_list = ["_reordered_int", "_reordered_cat", "_reordered_y"]
+    if DAYS == 1:
+        npys_list = ["_0_reordered_int", "_0_reordered_cat", "_0_reordered_y"]
+    stage_files: List[List[str]] = [
+        sorted(
+            map(
+                lambda x: os.path.join(args.in_memory_binary_criteo_path, x),
+                filter(lambda s: kind in s, files),
+            )
+        )
+        for kind in npys_list
+    ]    
     dataloader = DataLoader(
         InMemoryBinaryCriteoIterDataPipe(
             *stage_files,  # pyre-ignore[6]

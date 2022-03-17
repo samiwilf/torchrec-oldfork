@@ -380,6 +380,10 @@ class BinaryCriteoUtils:
             fin.seek(offset, os.SEEK_CUR)
             num_entries = num_rows * row_size
             data = np.fromfile(fin, dtype=dtype, count=num_entries)
+            if dtype == np.float64:
+                data = data.astype(np.float32)
+            if '_int' in fname:
+                data = np.log(data + 1)            
             return data.reshape((num_rows, row_size))
 
     @staticmethod
