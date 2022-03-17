@@ -34,6 +34,8 @@ from torchrec.datasets.utils import (
 )
 from torchrec.sparse.jagged_tensor import KeyedJaggedTensor
 
+import torchrec.mysettings as mysettings
+
 FREQUENCY_THRESHOLD = 3
 INT_FEATURE_COUNT = 13
 CAT_FEATURE_COUNT = 26
@@ -380,10 +382,11 @@ class BinaryCriteoUtils:
             fin.seek(offset, os.SEEK_CUR)
             num_entries = num_rows * row_size
             data = np.fromfile(fin, dtype=dtype, count=num_entries)
-            if dtype == np.float64:
-                data = data.astype(np.float32)
-            if '_int' in fname:
-                data = np.log(data + 1)            
+            if mysettings.DATASET == "subsample0":
+                if dtype == np.float64:
+                    data = data.astype(np.float32)
+                if '_int' in fname:
+                    data = np.log(data + 1)            
             return data.reshape((num_rows, row_size))
 
     @staticmethod

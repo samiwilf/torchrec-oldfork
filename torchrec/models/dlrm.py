@@ -4,7 +4,7 @@
 #
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
-
+import math
 from typing import List, Optional, Dict
 
 import torch
@@ -16,6 +16,7 @@ from torchrec.sparse.jagged_tensor import (
     KeyedTensor,
 )
 
+import torchrec.mysettings as mysettings
 
 def choose(n: int, k: int) -> int:
     """
@@ -141,8 +142,10 @@ class DenseArch(nn.Module):
         self.model: nn.Module = MLP(
             in_features, layer_sizes, bias=True, activation="relu", device=device
         )
-        for p in self.model.parameters():
-            a, b = len(p.size()), sum(p.size())
+        if mysettings.MLP_INIT_TYPES == "normal":
+            for p in self.model.parameters():
+                a, b = len(p.size()), sum(p.size())
+                p.data.normal_(mean=0, std=math.sqrt(a / b))
 
     def forward(self, features: torch.Tensor) -> torch.Tensor:
         """
@@ -192,6 +195,10 @@ class InteractionArch(nn.Module):
         self.triu_indices: torch.Tensor = torch.triu_indices(
             self.F + 1, self.F + 1, offset=1
         )
+        if mysettings.TRI_TYPE == "bottom":
+            self.triu_indices: torch.Tensor = self.F - torch.fliplr(torch.triu_indices(
+                self.F + 1, self.F + 1, offset=1
+            ))
 
     def forward(
         self, dense_features: torch.Tensor, sparse_features: torch.Tensor
@@ -258,8 +265,10 @@ class OverArch(nn.Module):
             ),
             nn.Linear(layer_sizes[-2], layer_sizes[-1], bias=True, device=device),
         )
-        for p in self.model.parameters():
-            a, b = len(p.size()), sum(p.size())        
+        if mysettings.MLP_INIT_TYPES == "normal":
+            for p in self.model.parameters():
+                a, b = len(p.size()), sum(p.size())
+                p.data.normal_(mean=0, std=math.sqrt(a / b))      
 
     def forward(self, features: torch.Tensor) -> torch.Tensor:
         """
