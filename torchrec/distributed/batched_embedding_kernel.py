@@ -127,7 +127,7 @@ class EmbeddingFusedOptimizer(FusedOptimizer):
         state: Dict[Any, Any] = {}
         param_group: Dict[str, Any] = {
             "params": [],
-            "lr": emb_module.optimizer_args.learning_rate,
+            "lr": 1.0, #emb_module.optimizer_args.learning_rate,
         }
 
         params: Dict[str, Union[torch.Tensor, ShardedTensor]] = {}

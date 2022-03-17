@@ -213,6 +213,9 @@ class EmbeddingShardingPlanner(ShardingPlanner):
             module=module,
             sharders=sharders,
         )
+
+        search_space = [option for option in search_space if option.compute_kernel=='batched_fused_uvm_caching']
+
         if not search_space:
             # No shardable parameters
             return ShardingPlan({})
