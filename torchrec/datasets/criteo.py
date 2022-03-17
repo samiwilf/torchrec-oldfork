@@ -362,10 +362,18 @@ class BinaryCriteoUtils:
         with path_manager.open(fname, "rb") as fin:
             np.lib.format.read_magic(fin)
             shape, _order, dtype = np.lib.format.read_array_header_1_0(fin)
-            if len(shape) == 2:
-                total_rows, row_size = shape
+            if mysettings.DATASET == "1tbnumpy":
+                if len(shape) == 2:
+                    total_rows, row_size = shape
+                else:
+                    raise ValueError("Cannot load range for npy with ndim == 2.")
             else:
-                raise ValueError("Cannot load range for npy with ndim == 2.")
+                if len(shape) == 2:
+                    total_rows, row_size = shape
+                elif len(shape) == 1:
+                    total_rows, row_size = shape[0], 1
+                else:
+                    raise ValueError("Cannot load range for npy with ndim == 2.")                
 
             if not (0 <= start_row < total_rows):
                 raise ValueError(
