@@ -141,6 +141,8 @@ class DenseArch(nn.Module):
         self.model: nn.Module = MLP(
             in_features, layer_sizes, bias=True, activation="relu", device=device
         )
+        for p in self.model.parameters():
+            a, b = len(p.size()), sum(p.size())
 
     def forward(self, features: torch.Tensor) -> torch.Tensor:
         """
@@ -256,6 +258,8 @@ class OverArch(nn.Module):
             ),
             nn.Linear(layer_sizes[-2], layer_sizes[-1], bias=True, device=device),
         )
+        for p in self.model.parameters():
+            a, b = len(p.size()), sum(p.size())        
 
     def forward(self, features: torch.Tensor) -> torch.Tensor:
         """
