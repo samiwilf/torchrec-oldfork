@@ -467,7 +467,9 @@ class BinaryCriteoUtils:
                 #num_rows, row_size = 1, 1                
             if SETTING == 4 or SETTING == 5:
                 data = np.fromfile(fin, dtype=dtype, count=num_entries)
-                if dtype == np.float64:
+                if '_cat' in fname:
+                    data = data.astype(np.int64)
+                elif dtype == np.float64:
                     data = data.astype(np.float32)
                 if '_int' in fname:
                     data = np.log(data + 1)

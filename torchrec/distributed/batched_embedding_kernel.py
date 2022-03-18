@@ -612,6 +612,7 @@ class BatchedFusedEmbeddingBag(BaseBatchedEmbeddingBag, FusedOptimizerModule):
         managed: List[EmbeddingLocation] = []
         compute_devices: List[ComputeDevice] = []
         for table in config.embedding_tables:
+            print(device)
             if device is not None and device.type == "cuda":
                 compute_devices.append(ComputeDevice.CUDA)
                 managed.append(to_embedding_location(table.compute_kernel))
@@ -677,7 +678,7 @@ class BatchedDenseEmbeddingBag(BaseBatchedEmbeddingBag):
         device: Optional[torch.device] = None,
     ) -> None:
         super().__init__(config, pg, device)
-
+        print(device)
         self._emb_module: DenseTableBatchedEmbeddingBagsCodegen = (
             DenseTableBatchedEmbeddingBagsCodegen(
                 list(zip(self._local_rows, self._local_cols)),

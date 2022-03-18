@@ -23,6 +23,9 @@ from torchrec.distributed.types import (
     ShardedTensorMetadata,
     ShardedTensor,
 )
+
+import torchrec.mysettings as mysettings
+
 from torchrec.distributed.utils import append_prefix
 from torchrec.modules.embedding_configs import pooling_type_to_str
 from torchrec.sparse.jagged_tensor import KeyedJaggedTensor
@@ -154,6 +157,16 @@ class GroupedEmbedding(BaseEmbedding):
                     ),
                 )
             )
+            if mysettings.NP_WEIGHT_INIT:
+                param = self._emb_modules[-1].weight.data
+                n = param.data.shape[0]
+                m = param.data.shape[1]
+                import numpy as np
+                np.random.seed(0)            
+                W = np.random.uniform(
+                        low=-np.sqrt(1 / n), high=np.sqrt(1 / n), size=(n, m)
+                    ).astype(np.float32) 
+                param.data.copy_ (torch.tensor(W, requires_grad=True))              
 
     def forward(self, features: KeyedJaggedTensor) -> torch.Tensor:
         indices_dict: Dict[str, torch.Tensor] = {}
@@ -246,6 +259,16 @@ class GroupedEmbeddingBag(BaseEmbedding):
                     ),
                 )
             )
+            if mysettings.NP_WEIGHT_INIT:
+                param = self._emb_modules[-1].weight.data
+                n = param.data.shape[0]
+                m = param.data.shape[1]
+                import numpy as np
+                np.random.seed(0)            
+                W = np.random.uniform(
+                        low=-np.sqrt(1 / n), high=np.sqrt(1 / n), size=(n, m)
+                    ).astype(np.float32) 
+                param.data.copy_ (torch.tensor(W, requires_grad=True))             
 
     def forward(self, features: KeyedJaggedTensor) -> torch.Tensor:
         pooled_embeddings: List[torch.Tensor] = []
