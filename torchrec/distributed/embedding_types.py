@@ -235,17 +235,17 @@ class BaseEmbeddingSharder(ModuleSharder[M]):
     ) -> List[str]:
         ret = [
             EmbeddingComputeKernel.DENSE.value,
-            EmbeddingComputeKernel.BATCHED_DENSE.value,
+            #EmbeddingComputeKernel.BATCHED_DENSE.value,
         ]
         if sharding_type != ShardingType.DATA_PARALLEL.value:
             ret += [
-                EmbeddingComputeKernel.BATCHED_FUSED.value,
-                EmbeddingComputeKernel.SPARSE.value,
+                #EmbeddingComputeKernel.BATCHED_FUSED.value,
+                #EmbeddingComputeKernel.SPARSE.value,
             ]
             if compute_device_type in {"cuda"}:
                 ret += [
-                    EmbeddingComputeKernel.BATCHED_FUSED_UVM.value,
-                    EmbeddingComputeKernel.BATCHED_FUSED_UVM_CACHING.value,
+                    #EmbeddingComputeKernel.BATCHED_FUSED_UVM.value,
+                    #EmbeddingComputeKernel.BATCHED_FUSED_UVM_CACHING.value,
                 ]
         return ret
 

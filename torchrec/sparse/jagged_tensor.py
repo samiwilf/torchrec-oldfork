@@ -1176,7 +1176,11 @@ class KeyedTensor(Pipelineable, metaclass=JaggedTensorMeta):
     def to_dict(self) -> Dict[str, torch.Tensor]:
         indices = self._key_indices()
         lengths = self._length_per_key
-        split_values = self._values.split(lengths, dim=self._key_dim)
+        try:
+            split_values = self._values.split(lengths, dim=self._key_dim)
+        except:
+            lengths = [8*128 for lens in lengths]
+            split_values = self._values.flatten().split(lengths, dim=0)
         return {key: split_values[index] for (key, index) in indices.items()}
 
     @staticmethod

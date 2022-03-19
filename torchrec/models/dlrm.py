@@ -134,15 +134,19 @@ class SparseArch(nn.Module):
 
         sparse_features: KeyedTensor = self.embedding_bag_collection(features)
 
+        #sparse_features._index_per_key = [{name:k} for k, name in enumerate(sparse_features._keys)]
+
         B: int = features.stride()
+        # shape '[5, 128, 8]' is invalid for input of size 5248
+        return sparse_features._values.reshape(self.F, B, self.D).transpose(0,1)
 
-        sparse: Dict[str, torch.Tensor] = sparse_features.to_dict()
-        sparse_values: List[torch.Tensor] = []
-        for name in self.sparse_feature_names:
-            sparse_values.append(sparse[name])
-
-        #return torch.cat(sparse_values, dim=1).reshape(B, self.F, self.D)
-        return torch.cat(sparse_values, dim=0).reshape(self.F, self.D, B)
+        # sparse: Dict[str, torch.Tensor] = sparse_features.to_dict()
+        # sparse_values: List[torch.Tensor] = []
+        # for name in self.sparse_feature_names:
+        #     sparse_values.append(sparse[name])
+        # 
+        # #return torch.cat(sparse_values, dim=1).reshape(B, self.F, self.D)
+        # return torch.cat(sparse_values, dim=0).reshape(self.F, self.D, B)
 
     @property
     def sparse_feature_names(self) -> List[str]:
@@ -247,14 +251,14 @@ class InteractionArch(nn.Module):
 
         #dense_features.unsqueeze(1).shape : 2048, 1, 13
 
-        #combined_values = torch.cat(
-        #    (dense_features.unsqueeze(1), sparse_features), dim=1
-        #) # outputs 2048, 27, 128
+        combined_values = torch.cat(
+            (dense_features.unsqueeze(1), sparse_features), dim=1
+        ) # outputs 2048, 27, 128
         
         #combined_values = torch.cat((dense_features.unsqueeze(0), sparse_features.reshape(-1, B, D)), dim=1).view((B, -1, D))
 
-        combined_values = torch.cat(
-            (dense_features.unsqueeze(0).transpose(0,1), sparse_features.reshape(-1, B, D).transpose(0,1)), dim=1).view((B, -1, D))
+        #combined_values = torch.cat(
+        #    (dense_features.unsqueeze(0).transpose(0,1), sparse_features.reshape(-1, B, D).transpose(0,1)), dim=1).view((B, -1, D))
 
         #torch.stack([t for t in combined_values.transpose(1,0)])
         #combined_values = combined_values.transpose(0,1)        

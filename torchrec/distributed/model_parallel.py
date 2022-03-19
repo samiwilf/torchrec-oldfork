@@ -332,8 +332,8 @@ class DistributedModelParallel(nn.Module, FusedOptimizerModule):
         def init_parameters(module: nn.Module) -> None:
             # Allocate parameters and buffers if over 'meta' device.
             has_meta_param = False
-            print("Module type: ", type(module))
-            print("for name, param in module._parameters.items():")
+            #print("Module type: ", type(module))
+            #print("for name, param in module._parameters.items():")
             for name, param in module._parameters.items():
                 print(name)
                 if isinstance(param, torch.Tensor) and param.device.type == "meta":
@@ -342,7 +342,7 @@ class DistributedModelParallel(nn.Module, FusedOptimizerModule):
                         requires_grad=param.requires_grad,
                     )
                     has_meta_param = True
-            print("for name, buffer in module._buffers.items():")
+            #print("for name, buffer in module._buffers.items():")
             for name, buffer in module._buffers.items():
                 print(name)
                 if isinstance(buffer, torch.Tensor) and buffer.device.type == "meta":
@@ -454,7 +454,7 @@ class DistributedModelParallel(nn.Module, FusedOptimizerModule):
         recurse: bool = True,
         strip_ddp: bool = True,
     ) -> Iterator[Tuple[str, torch.nn.Parameter]]:
-        print("Entering _named_parameters")
+        #print("Entering _named_parameters")
         if strip_ddp:
             module = dmp_get_module(module)
         if isinstance(module, ShardedModule):
@@ -462,13 +462,13 @@ class DistributedModelParallel(nn.Module, FusedOptimizerModule):
         else:
             yield from module.named_parameters(prefix, recurse=False)
             for name, child in module.named_children():
-                print(name)
-                print("Type: ",type(child))
+                #print(name)
+                #print("Type: ",type(child))
                 yield from self._named_parameters(
                     child, append_prefix(prefix, name), recurse, strip_ddp
                 )
-                print("next in list")
-        print("Exiting _named_parameters")
+                #print("next in list")
+        #print("Exiting _named_parameters")
 
     def named_parameters(
         self, prefix: str = "", recurse: bool = True

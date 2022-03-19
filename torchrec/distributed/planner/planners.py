@@ -208,6 +208,9 @@ class EmbeddingShardingPlanner(ShardingPlanner):
             sharders=sharders,
             constraints=self._constraints,
         )
+        for d in storage_constraint.devices:
+            d.storage.ddr += 10000000000000
+            d.storage.hbm += 10000000000000        
 
         search_space = self._enumerator.enumerate(
             module=module,

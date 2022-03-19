@@ -15,6 +15,7 @@ from typing import List, Optional, Dict, Any, Union, Tuple, cast, Iterator
 from torchrec.mysettings import (
     NP_WEIGHT_INIT
 )
+import numpy as np
 
 import torch
 import torch.distributed as dist
@@ -318,6 +319,8 @@ class BaseBatchedEmbedding(BaseEmbedding):
 
 
     def forward(self, features: KeyedJaggedTensor) -> torch.Tensor:
+
+
         return self.emb_module(
             indices=features.values().long(),
             offsets=features.offsets().long(),
@@ -539,16 +542,37 @@ class BaseBatchedEmbeddingBag(BaseEmbedding):
                     ).astype(np.float32) 
                 param.data.copy_ (torch.tensor(W, requires_grad=True))
 
-
     def forward(self, features: KeyedJaggedTensor) -> torch.Tensor:
-        weights = features.weights_or_none()
-        if weights is not None and not torch.is_floating_point(weights):
-            weights = None
-        return self.emb_module(
-            indices=features.values().long(),
-            offsets=features.offsets().long(),
-            per_sample_weights=weights,
-        )
+        #print("here")
+        if features._keys[0] == features._keys[1]:
+            return self.emb_module(features.values(), features.offsets()[:-1])
+        else:
+            batch_size = int(len(features.values()) / len(self._num_embeddings))
+            emb_dim = self._local_cols[0]
+            lengths_list = self._num_embeddings
+            indices_lengths_cumsum = np.cumsum([0] + lengths_list)
+            #print("weights ",self.emb_module.weight.data.shape)
+            #print("offsets ",features.offsets())
+            amax = 0
+            for i in range(0, len(lengths_list)):
+                a = torch.max(features.values()[i*batch_size: (i+1)*batch_size] + indices_lengths_cumsum[i])
+                if a > amax:
+                    amax = a
+            #print("max index ", amax)
+            if amax < self.emb_module.weight.data.shape[0]:
+                for i in range(0, len(lengths_list)):
+                    features.values()[i*batch_size: (i+1)*batch_size] + indices_lengths_cumsum[i]            
+            #print("indices ",features.values())
+            #print("indices shape ", features.values().shape)           
+            return self.emb_module(features.values(), features.offsets()[:-1])
+            #weights = features.weights_or_none()
+            #if weights is not None and not torch.is_floating_point(weights):
+            #    weights = None
+            #return self.emb_module(
+            #    indices=features.values().long(),
+            #    offsets=features.offsets().long(),
+            #    per_sample_weights=weights,
+            #)
 
     # pyre-fixme[14]: `state_dict` overrides method defined in `Module` inconsistently.
     def state_dict(
@@ -621,25 +645,46 @@ class BatchedFusedEmbeddingBag(BaseBatchedEmbeddingBag, FusedOptimizerModule):
                 managed.append(EmbeddingLocation.HOST)
         if fused_params is None:
             fused_params = {}
-        self._emb_module: SplitTableBatchedEmbeddingBagsCodegen = (
-            SplitTableBatchedEmbeddingBagsCodegen(
-                embedding_specs=list(
-                    zip(self._local_rows, self._local_cols, managed, compute_devices)
-                ),
-                feature_table_map=self._feature_table_map,
-                pooling_mode=self._pooling,
-                weights_precision=data_type_to_sparse_type(config.data_type),
-                device=device,
-                **fused_params,
-            )
+        
+        embedding_specs=list(
+            zip(self._local_rows, self._local_cols, managed, compute_devices)
         )
-        self._optim: EmbeddingFusedOptimizer = EmbeddingFusedOptimizer(
-            config,
-            self._emb_module,
-            pg,
-        )
+        total_embeddings_count = 0
+        for e in embedding_specs:
+            total_embeddings_count += e[0]
+        embedding_dim = embedding_specs[0][1]
 
-        self.init_parameters()
+        self._emb_module: nn.EmbeddingBag = nn.EmbeddingBag(
+            embedding_specs[0][0], 
+            embedding_dim, mode="sum", 
+            sparse=True, 
+            include_last_offset=False,
+            device=device,
+        )
+        self._emb_module.weight.requires_grad = True
+
+        torch.cuda.synchronize()
+
+        if False:
+            self._emb_module: SplitTableBatchedEmbeddingBagsCodegen = (
+                SplitTableBatchedEmbeddingBagsCodegen(
+                    embedding_specs=list(
+                        zip(self._local_rows, self._local_cols, managed, compute_devices)
+                    ),
+                    feature_table_map=self._feature_table_map,
+                    pooling_mode=self._pooling,
+                    weights_precision=data_type_to_sparse_type(config.data_type),
+                    device=device,
+                    **fused_params,
+                )
+            )
+        #self._optim: EmbeddingFusedOptimizer = EmbeddingFusedOptimizer(
+        #    config,
+        #    self._emb_module,
+        #    pg,
+        #)
+
+        #self.init_parameters()
 
     @property
     def emb_module(
@@ -679,18 +724,34 @@ class BatchedDenseEmbeddingBag(BaseBatchedEmbeddingBag):
     ) -> None:
         super().__init__(config, pg, device)
         print(device)
-        self._emb_module: DenseTableBatchedEmbeddingBagsCodegen = (
-            DenseTableBatchedEmbeddingBagsCodegen(
-                list(zip(self._local_rows, self._local_cols)),
-                feature_table_map=self._feature_table_map,
-                pooling_mode=self._pooling,
-                use_cpu=device is None
-                or device.type == "cpu"
-                or not torch.cuda.is_available(),
-            )
-        )
 
-        self.init_parameters()
+        embedding_specs = list(zip(self._local_rows, self._local_cols))
+        print("embedding_specs ",embedding_specs)
+        total_embeddings_count = 0
+        for e in embedding_specs:
+            total_embeddings_count += e[0]
+        embedding_dim = embedding_specs[0][1]
+
+        self._emb_module: nn.EmbeddingBag = nn.EmbeddingBag(
+            total_embeddings_count, 
+            embedding_dim, mode="sum", 
+            sparse=True, 
+            include_last_offset=False,
+            device=device)
+        self._emb_module.weight.requires_grad = True
+
+        #self._emb_module: DenseTableBatchedEmbeddingBagsCodegen = (
+        #    DenseTableBatchedEmbeddingBagsCodegen(
+        #        list(zip(self._local_rows, self._local_cols)),
+        #        feature_table_map=self._feature_table_map,
+        #        pooling_mode=self._pooling,
+        #        use_cpu=device is None
+        #        or device.type == "cpu"
+        #        or not torch.cuda.is_available(),
+        #    )
+        #)
+
+        #self.init_parameters()
 
     @property
     def emb_module(
@@ -704,6 +765,7 @@ class BatchedDenseEmbeddingBag(BaseBatchedEmbeddingBag):
         combined_key = "/".join(
             [config.name for config in self._config.embedding_tables]
         )
+
         yield append_prefix(prefix, f"{combined_key}.weight"), cast(
-            nn.Parameter, self._emb_module.weights
+            nn.Parameter, self._emb_module.weights if hasattr(self._emb_module, 'weights') else self._emb_module.weight
         )

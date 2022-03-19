@@ -146,6 +146,9 @@ class EmbeddingBagCollection(EmbeddingBagCollectionInterface):
                 if embedding_config.data_type == DataType.FP32
                 else torch.float16
             )
+            print(embedding_config.num_embeddings)
+            print(embedding_config.embedding_dim)
+            print(device)
             self.embedding_bags[embedding_config.name] = nn.EmbeddingBag(
                 num_embeddings=embedding_config.num_embeddings,
                 embedding_dim=embedding_config.embedding_dim,

@@ -276,11 +276,11 @@ class ShardedEmbeddingBagCollection(
                 if isinstance(module, FusedOptimizerModule):
                     # modify param keys to match EmbeddingBagCollection
                     params: Mapping[str, Union[torch.Tensor, ShardedTensor]] = {}
-                    for param_key, weight in module.fused_optimizer.params.items():
-                        # pyre-fixme[16]: `Mapping` has no attribute `__setitem__`.
-                        params["embedding_bags." + param_key] = weight
-                    module.fused_optimizer.params = params
-                    optims.append(("", module.fused_optimizer))
+                    #for param_key, weight in module.fused_optimizer.params.items():
+                    #    # pyre-fixme[16]: `Mapping` has no attribute `__setitem__`.
+                    #    params["embedding_bags." + param_key] = weight
+                    #module.fused_optimizer.params = params
+                    #optims.append(("", module.fused_optimizer))
         self._optim: CombinedOptimizer = CombinedOptimizer(optims) ## cat_0 emb bag param is here!!!!
 
     def _create_input_dist(
