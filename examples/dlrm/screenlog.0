@@ -1,0 +1,61 @@
+Node 0 [01;32mubuntu@ip-172-31-47-120[00m:[01;34m~/repos/torchrec-fork/examples/dlrm[00m$ conda activaote [K[K[K[Kte torchrec
+(torchrec) Node 0 [01;32mubuntu@ip-172-31-47-120[00m:[01;34m~/repos/torchrec-fork/examples/dlrm[00m$ conda activate torchrecpython dlrm_s_pytorch.py ; cat -n s3.txt | head -5010cd $F[Konda activate torchrecsource /home/ubuntu/anaconda3/bin/activateCUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 torchx run -s local_cwd dist.ddp -j 1x1 --script dlrm_main.py[A(torchrec) Node 0 [01;32mubuntu@ip-172-31-47-120[00m:[01;34m~/repos/torchrec-fork/examples/dlrm[00m$ UDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 torchx run -s local_cwd dist.ddp -j 1x1 --script[1P dlrm_main.py[A(torchrec) Node 0 [01;32mubuntu@ip-172-31-47-120[00m:[01;34m~/repos/torchrec-fork/examples/dlrm[00m$ DA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 torchx run -s local_cwd dist.ddp -j 1x1 --script [1Pdlrm_main.py[A(torchrec) Node 0 [01;32mubuntu@ip-172-31-47-120[00m:[01;34m~/repos/torchrec-fork/examples/dlrm[00m$ A_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 torchx run -s local_cwd dist.ddp -j 1x1 --script d[1Plrm_main.py[A(torchrec) Node 0 [01;32mubuntu@ip-172-31-47-120[00m:[01;34m~/repos/torchrec-fork/examples/dlrm[00m$ _VISIBLE_DEVICES=0,1,2,3,4,5,6,7 torchx run -s local_cwd dist.ddp -j 1x1 --script dl[1Prm_main.py[A(torchrec) Node 0 [01;32mubuntu@ip-172-31-47-120[00m:[01;34m~/repos/torchrec-fork/examples/dlrm[00m$ VISIBLE_DEVICES=0,1,2,3,4,5,6,7 torchx run -s local_cwd dist.ddp -j 1x1 --script dlr[1Pm_main.py[A(torchrec) Node 0 [01;32mubuntu@ip-172-31-47-120[00m:[01;34m~/repos/torchrec-fork/examples/dlrm[00m$ ISIBLE_DEVICES=0,1,2,3,4,5,6,7 torchx run -s local_cwd dist.ddp -j 1x1 --script dlrm[1P_main.py[A(torchrec) Node 0 [01;32mubuntu@ip-172-31-47-120[00m:[01;34m~/repos/torchrec-fork/examples/dlrm[00m$ SIBLE_DEVICES=0,1,2,3,4,5,6,7 torchx run -s local_cwd dist.ddp -j 1x1 --script dlrm_[1Pmain.py[A(torchrec) Node 0 [01;32mubuntu@ip-172-31-47-120[00m:[01;34m~/repos/torchrec-fork/examples/dlrm[00m$ IBLE_DEVICES=0,1,2,3,4,5,6,7 torchx run -s local_cwd dist.ddp -j 1x1 --script dlrm_m[1Pain.py[A(torchrec) Node 0 [01;32mubuntu@ip-172-31-47-120[00m:[01;34m~/repos/torchrec-fork/examples/dlrm[00m$ BLE_DEVICES=0,1,2,3,4,5,6,7 torchx run -s local_cwd dist.ddp -j 1x1 --script dlrm_ma[1Pin.py[A(torchrec) Node 0 [01;32mubuntu@ip-172-31-47-120[00m:[01;34m~/repos/torchrec-fork/examples/dlrm[00m$ LE_DEVICES=0,1,2,3,4,5,6,7 torchx run -s local_cwd dist.ddp -j 1x1 --script dlrm_mai[1Pn.py[A(torchrec) Node 0 [01;32mubuntu@ip-172-31-47-120[00m:[01;34m~/repos/torchrec-fork/examples/dlrm[00m$ E_DEVICES=0,1,2,3,4,5,6,7 torchx run -s local_cwd dist.ddp -j 1x1 --script dlrm_main[1P.py[A(torchrec) Node 0 [01;32mubuntu@ip-172-31-47-120[00m:[01;34m~/repos/torchrec-fork/examples/dlrm[00m$ _DEVICES=0,1,2,3,4,5,6,7 torchx run -s local_cwd dist.ddp -j 1x1 --script dlrm_main.[1Ppy[A(torchrec) Node 0 [01;32mubuntu@ip-172-31-47-120[00m:[01;34m~/repos/torchrec-fork/examples/dlrm[00m$ DEVICES=0,1,2,3,4,5,6,7 torchx run -s local_cwd dist.ddp -j 1x1 --script dlrm_main.p[1Py[A(torchrec) Node 0 [01;32mubuntu@ip-172-31-47-120[00m:[01;34m~/repos/torchrec-fork/examples/dlrm[00m$ EVICES=0,1,2,3,4,5,6,7 torchx run -s local_cwd dist.ddp -j 1x1 --script dlrm_main.py[K[A(torchrec) Node 0 [01;32mubuntu@ip-172-31-47-120[00m:[01;34m~/repos/torchrec-fork/examples/dlrm[00m$ VICES=0,1,2,3,4,5,6,7 torchx run -s local_cwd dist.ddp -j 1x1 --script dlrm_main.py [K[A[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[1P
+[K[A[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[1P[1P[1P[1P[1P[1P[1P[1P[1P[1P[1P[1P[1P[1P[1P[1P[1P[1P[1P[1P[1P[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[1P[1@8
+[38:2:238:76:44mtorchx[0m [2m2022-03-20 03:14:48 INFO    [0m Log files located in: /tmp/torchx_or3306j7/torchx/dlrm_main-k1qn2qhqx2xqw/dlrm_main/0
+local_cwd://torchx/dlrm_main-k1qn2qhqx2xqw
+[38:2:238:76:44mtorchx[0m [2m2022-03-20 03:14:49 INFO    [0m Waiting for the app to finish...
+[32mdlrm_main/0[0m WARNING:__main__:
+[32mdlrm_main/0[0m *****************************************
+[32mdlrm_main/0[0m Setting OMP_NUM_THREADS environment variable for each process to be 1 in default, to avoid your system being overloaded, please further tune the variable for optimal performance in your application as needed. 
+[32mdlrm_main/0[0m *****************************************
+[32mdlrm_main/0[0m [W socket.cpp:401] The server socket has failed to bind to [::]:29500 (errno: 98 - Address already in use).
+[32mdlrm_main/0[0m [W socket.cpp:401] The server socket has failed to bind to ?UNKNOWN? (errno: 98 - Address already in use).
+[32mdlrm_main/0[0m [E socket.cpp:435] The server socket has failed to listen on any local network address.
+[32mdlrm_main/0[0m ****************************************
+[32mdlrm_main/0[0m *********  RUNNING SETTING 5  **********
+[32mdlrm_main/0[0m ****************************************
+[32mdlrm_main/0[0m ****************************************
+[32mdlrm_main/0[0m *********  RUNNING SETTING 5  **********
+[32mdlrm_main/0[0m ********************************************************************************
+[32mdlrm_main/0[0m 
+[32mdlrm_main/0[0m *********  RUNNING SETTING 5  **********
+[32mdlrm_main/0[0m ****************************************
+[32mdlrm_main/0[0m ********************************************************************************
+[32mdlrm_main/0[0m ****************************************
+[32mdlrm_main/0[0m *********  RUNNING SETTING 5  **********
+[32mdlrm_main/0[0m *********  RUNNING SETTING 5  **********
+[32mdlrm_main/0[0m *********  RUNNING SETTING 5  **********
+[32mdlrm_main/0[0m ****************************************
+[32mdlrm_main/0[0m ********************************************************************************
+[32mdlrm_main/0[0m ****************************************
+[32mdlrm_main/0[0m 
+[32mdlrm_main/0[0m 
+[32mdlrm_main/0[0m *********  RUNNING SETTING 5  **********
+[32mdlrm_main/0[0m ****************************************
+[32mdlrm_main/0[0m ****************************************
+[32mdlrm_main/0[0m *********  RUNNING SETTING 5  **********
+[32mdlrm_main/0[0m ****************************************
+[32mdlrm_main/0[0m [W socket.cpp:701] The server socket on [ip-172-31-47-120.ec2.internal]:42399 is not yet listening (errno: 111 - Connection refused), will retry.
+[32mdlrm_main/0[0m [W socket.cpp:701] The server socket on [ip-172-31-47-120.ec2.internal]:42399 is not yet listening (errno: 111 - Connection refused), will retry.
+[32mdlrm_main/0[0m ['--embedding_dim', '128', '--dense_arch_layer_sizes', '512,256,128', '--over_arch_layer_sizes', '1024,1024,512,256,1', '--num_embeddings', '40000000', '--batch_size', '2048', '--num_embeddings_per_feature', '45833188,36746,17245,7413,20243,3,7114,1441,62,29275261,1572176,345138,10,2209,11267,128,4,974,14,48937457,11316796,40094537,452104,12606,104,35', '--epochs', '1', '--in_memory_binary_criteo_path', '/home/ubuntu/mountpoint/criteo_terabyte_subsample0.0_maxind40M', '--pin_memory', '--learning_rate', '1.0']
+[32mdlrm_main/0[0m fname fname fname  fname   /home/ubuntu/mountpoint/criteo_terabyte_subsample0.0_maxind40M/day_11_reordered_int.npy /home/ubuntu/mountpoint/criteo_terabyte_subsample0.0_maxind40M/day_1_reordered_int.npy/home/ubuntu/mountpoint/criteo_terabyte_subsample0.0_maxind40M/day_14_reordered_int.npy
+[32mdlrm_main/0[0m /home/ubuntu/mountpoint/criteo_terabyte_subsample0.0_maxind40M/day_4_reordered_int.npy
+[32mdlrm_main/0[0m 
+[32mdlrm_main/0[0m 
+[32mdlrm_main/0[0m fname  /home/ubuntu/mountpoint/criteo_terabyte_subsample0.0_maxind40M/day_0_reordered_int.npy
+[32mdlrm_main/0[0m fname  /home/ubuntu/mountpoint/criteo_terabyte_subsample0.0_maxind40M/day_17_reordered_int.npy
+[32mdlrm_main/0[0m fname fname  /home/ubuntu/mountpoint/criteo_terabyte_subsample0.0_maxind40M/day_22_reordered_int.npy 
+[32mdlrm_main/0[0m /home/ubuntu/mountpoint/criteo_terabyte_subsample0.0_maxind40M/day_7_reordered_int.npy
+[32mdlrm_main/0[0m fname  /home/ubuntu/mountpoint/criteo_terabyte_subsample0.0_maxind40M/day_12_reordered_int.npy
+[32mdlrm_main/0[0m fname  /home/ubuntu/mountpoint/criteo_terabyte_subsample0.0_maxind40M/day_20_reordered_int.npy
+[32mdlrm_main/0[0m fname  /home/ubuntu/mountpoint/criteo_terabyte_subsample0.0_maxind40M/day_15_reordered_int.npy
+[32mdlrm_main/0[0m fname  /home/ubuntu/mountpoint/criteo_terabyte_subsample0.0_maxind40M/day_18_reordered_int.npy
+[32mdlrm_main/0[0m fname  /home/ubuntu/mountpoint/criteo_terabyte_subsample0.0_maxind40M/day_2_reordered_int.npy
+[32mdlrm_main/0[0m fname  /home/ubuntu/mountpoint/criteo_terabyte_subsample0.0_maxind40M/day_5_reordered_int.npy
+[32mdlrm_main/0[0m fname  /home/ubuntu/mountpoint/criteo_terabyte_subsample0.0_maxind40M/day_8_reordered_int.npy
+[32mdlrm_main/0[0m fname  /home/ubuntu/mountpoint/criteo_terabyte_subsample0.0_maxind40M/day_13_reordered_int.npy
+[32mdlrm_main/0[0m fname  /home/ubuntu/mountpoint/criteo_terabyte_subsample0.0_maxind40M/day_19_reordered_int.npy
+[32mdlrm_main/0[0m fname  /home/ubuntu/mountpoint/criteo_terabyte_subsample0.0_maxind40M/day_10_reordered_int.npy
+[32mdlrm_main/0[0m fname  /home/ubuntu/mountpoint/criteo_terabyte_subsample0.0_maxind40M/day_21_reordered_int.npy
+[32mdlrm_main/0[0m fname  /home/ubuntu/mountpoint/criteo_terabyte_subsample0.0_maxind40M/day_16_reordered_int.npy
+[32mdlrm_main/0[0m fname  /home/ubuntu/mountpoint/criteo_terabyte_subsample0.0_maxind40M/day_6_reordered_int.npy

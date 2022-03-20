@@ -18,6 +18,7 @@ from torchrec.mysettings import (
 
 import torch
 import torch.distributed as dist
+import fbgemm_gpu
 from fbgemm_gpu.split_table_batched_embeddings_ops import (
     EmbeddingLocation,
     ComputeDevice,
@@ -261,6 +262,7 @@ class EmbeddingFusedOptimizer(FusedOptimizer):
     def step(self, closure: Any = None) -> None:
         # pyre-ignore [16]
         self._emb_module.set_learning_rate(self.param_groups[0]["lr"])
+        self._emb_module.flush()
 
 
 class BaseBatchedEmbedding(BaseEmbedding):
@@ -403,6 +405,8 @@ class BatchedFusedEmbedding(BaseBatchedEmbedding, FusedOptimizerModule):
                 weights_precision=data_type_to_sparse_type(config.data_type),
                 device=device,
                 **fused_params,
+                optimizer=fbgemm_gpu.split_table_batched_embeddings_ops.OptimType.EXACT_SGD,
+                learning_rate=1.0,
             )
         )
         self._optim: EmbeddingFusedOptimizer = EmbeddingFusedOptimizer(
@@ -630,6 +634,8 @@ class BatchedFusedEmbeddingBag(BaseBatchedEmbeddingBag, FusedOptimizerModule):
                 weights_precision=data_type_to_sparse_type(config.data_type),
                 device=device,
                 **fused_params,
+                optimizer=fbgemm_gpu.split_table_batched_embeddings_ops.OptimType.EXACT_SGD,
+                learning_rate=1.0,                
             )
         )
         self._optim: EmbeddingFusedOptimizer = EmbeddingFusedOptimizer(

@@ -420,9 +420,9 @@ def main(argv: List[str]) -> None:
         dict(model.named_parameters()),
         lambda params: torch.optim.SGD(params, lr=args.learning_rate),
     )
-    for pg in model.fused_optimizer.param_groups:
-        pg['lr']=args.learning_rate
-    optimizer = CombinedOptimizer([model.fused_optimizer, optimizer])
+    #for pg in model.fused_optimizer.param_groups:
+    #    pg['lr']=args.learning_rate
+    #optimizer = CombinedOptimizer([model.fused_optimizer, optimizer])
 
     train_pipeline = TrainPipelineSparseDist(
         model,

@@ -542,6 +542,7 @@ class TrainPipelineSparseDist(TrainPipeline[In, Out]):
             with record_function("## optimizer ##"):
                 # pyre-fixme[20]: Argument `closure` expected.
                 self._optimizer.step()
+                self._model.fused_optimizer.step()
 
         self._batch_i = batch_ip1
         self._batch_ip1 = batch_ip2

@@ -5,7 +5,7 @@
 import pathlib
 
 LOG_PATH = "/home/ubuntu/repos/torchrec-fork/examples/dlrm/"
-SETTING = 4
+SETTING = 5
 print('*'.center(40, '*'))
 print(f"  RUNNING SETTING {SETTING}  ".center(40, '*'))
 print('*'.center(40, '*'))
@@ -85,8 +85,8 @@ if SETTING == 5:
     SAVE_DEBUG_DATA = False
     SAVE_LOSSES = False
     MODEL_EVAL = True
-    NP_WEIGHT_INIT = True
-    LOG_FILE = "s5_losses_terabyte_full.txt"
+    NP_WEIGHT_INIT = False
+    LOG_FILE = "s5.txt"
     INT_FEATURE_COUNT = 13
     #CAT_FEATURE_COUNT = 26 
     DAYS = 24
@@ -115,7 +115,7 @@ COMMON_ARGV = [
 ]
 
 if SETTING != 5 and SETTING != 4:
-    COMMON_ARGV += ['--limit_train_batches', '50'] #, '--limit_val_batches', '5', '--limit_test_batches', '5']
+    COMMON_ARGV += ['--limit_train_batches', '50', '--limit_val_batches', '50', '--limit_test_batches', '50']
 #COMMON_ARGV += ['--limit_train_batches', '256055', '--limit_val_batches', '5441', '--limit_test_batches', '5431']
 
 
