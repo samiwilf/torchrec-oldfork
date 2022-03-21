@@ -73,7 +73,7 @@ class TWSharder(
     def compute_kernels(
         self, sharding_type: str, compute_device_type: str
     ) -> List[str]:
-        return [EmbeddingComputeKernel.DENSE.value]
+        return [EmbeddingComputeKernel.SPARSE.value]
 
 def parse_args(argv: List[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="torchrec dlrm example trainer")
@@ -430,7 +430,7 @@ def main(argv: List[str]) -> None:
     model = DistributedModelParallel(
         module=train_model,
         device=device,
-        #sharders=[TWSharder()]
+        sharders=[TWSharder()]
     )
     optimizer = KeyedOptimizerWrapper(
         dict(model.named_parameters()),
