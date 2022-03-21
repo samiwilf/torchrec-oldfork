@@ -59,6 +59,21 @@ except ImportError:
 
 TRAIN_PIPELINE_STAGES = 3  # Number of stages in TrainPipelineSparseDist.
 
+from torchrec.distributed.embedding_types import EmbeddingComputeKernel
+from torchrec.distributed.embeddingbag import EmbeddingBagCollectionSharder
+from torchrec.distributed.types import ModuleSharder, ShardingType
+import torch.nn as nn
+
+class TWSharder(
+    EmbeddingBagCollectionSharder[EmbeddingBagCollection], ModuleSharder[nn.Module]
+):
+    def sharding_types(self, compute_device_type: str) -> List[str]:
+        return [ShardingType.TABLE_WISE.value]
+
+    def compute_kernels(
+        self, sharding_type: str, compute_device_type: str
+    ) -> List[str]:
+        return [EmbeddingComputeKernel.DENSE.value]
 
 def parse_args(argv: List[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="torchrec dlrm example trainer")
@@ -415,6 +430,7 @@ def main(argv: List[str]) -> None:
     model = DistributedModelParallel(
         module=train_model,
         device=device,
+        #sharders=[TWSharder()]
     )
     optimizer = KeyedOptimizerWrapper(
         dict(model.named_parameters()),
