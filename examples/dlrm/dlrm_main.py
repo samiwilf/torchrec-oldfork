@@ -59,6 +59,36 @@ except ImportError:
 
 TRAIN_PIPELINE_STAGES = 3  # Number of stages in TrainPipelineSparseDist.
 
+from torchrec.distributed.embedding_types import EmbeddingComputeKernel
+from torchrec.distributed.embeddingbag import EmbeddingBagCollectionSharder
+from torchrec.distributed.types import ModuleSharder, ShardingType
+import torch.nn as nn
+
+class TWSharder(
+    EmbeddingBagCollectionSharder[EmbeddingBagCollection], ModuleSharder[nn.Module]
+):
+    def sharding_types(self, compute_device_type: str) -> List[str]:
+        return [
+            ShardingType.DATA_PARALLEL.value,
+            ShardingType.TABLE_WISE.value,
+            ShardingType.COLUMN_WISE.value,
+            ShardingType.ROW_WISE.value,
+            ShardingType.TABLE_ROW_WISE.value,
+            ShardingType.TABLE_COLUMN_WISE.value,
+            ]
+
+    def compute_kernels(
+        self, sharding_type: str, compute_device_type: str
+    ) -> List[str]:
+        return [
+            EmbeddingComputeKernel.DENSE.value, 
+            EmbeddingComputeKernel.SPARSE.value,
+            EmbeddingComputeKernel.BATCHED_DENSE.value,
+            EmbeddingComputeKernel.BATCHED_FUSED.value,
+            EmbeddingComputeKernel.BATCHED_FUSED_UVM.value,
+            EmbeddingComputeKernel.BATCHED_FUSED_UVM_CACHING.value,
+            EmbeddingComputeKernel.BATCHED_QUANT.value,            
+        ]
 
 def parse_args(argv: List[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="torchrec dlrm example trainer")
@@ -415,6 +445,7 @@ def main(argv: List[str]) -> None:
     model = DistributedModelParallel(
         module=train_model,
         device=device,
+        #sharders=[TWSharder()],
     )
     optimizer = KeyedOptimizerWrapper(
         dict(model.named_parameters()),
