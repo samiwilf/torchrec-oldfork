@@ -86,7 +86,7 @@ if SETTING == 5:
     SAVE_LOSSES = False
     MODEL_EVAL = True
     NP_WEIGHT_INIT = False
-    LOG_FILE = "s5_losses_terabyte_full.txt"
+    LOG_FILE = "s5.txt"
     INT_FEATURE_COUNT = 13
     #CAT_FEATURE_COUNT = 26 
     DAYS = 24
