@@ -21,6 +21,17 @@ from typing import (
     Set,
 )
 
+import torchrec.mysettings as mysettings
+from torchrec.mysettings import (
+    ARGV,
+    INT_FEATURE_COUNT,
+    CAT_FEATURE_COUNT,
+    DAYS,
+    SETTING,
+    LOG_FILE,
+)
+from torch import distributed as dist
+
 import torch
 from torch.autograd.profiler import record_function
 from torch.fx.node import Node
@@ -142,6 +153,11 @@ class TrainPipelineBase(TrainPipeline[In, Out]):
 
         # Update
         if self._model.training:
+            if mysettings.SAVE_LOSSES and dist.get_rank() == 0:
+                self.losseslog = open(LOG_FILE, "a")
+                line = str(losses.detach().cpu().numpy().tolist()) + "\n"
+                self.losseslog.write(line)
+                self.losseslog.close()
             with record_function("## optimizer ##"):
                 # pyre-fixme[20]: Argument `closure` expected.
                 self._optimizer.step()
@@ -534,6 +550,11 @@ class TrainPipelineSparseDist(TrainPipeline[In, Out]):
                 _start_data_dist(self._pipelined_modules, batch_ip1, self._context)
 
         if self._model.training:
+            if mysettings.SAVE_LOSSES and dist.get_rank() == 0:
+                self.losseslog = open(LOG_FILE, "a")
+                line = str(losses.detach().cpu().numpy().tolist()) + "\n"
+                self.losseslog.write(line)
+                self.losseslog.close()            
             # Backward
             with record_function("## backward ##"):
                 torch.sum(losses, dim=0).backward()
@@ -542,6 +563,7 @@ class TrainPipelineSparseDist(TrainPipeline[In, Out]):
             with record_function("## optimizer ##"):
                 # pyre-fixme[20]: Argument `closure` expected.
                 self._optimizer.step()
+                #list(self._model.modules())[5]._optim._optims[0][1]._emb_module.flush()
 
         self._batch_i = batch_ip1
         self._batch_ip1 = batch_ip2

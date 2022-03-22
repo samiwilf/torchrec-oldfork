@@ -1,0 +1,51 @@
+Node 0 [01;32mubuntu@ip-172-31-47-120[00m:[01;34m~/repos/torchrec-fork/examples/dlrm[00m$ conda activate torchrec
+(torchrec) Node 0 [01;32mubuntu@ip-172-31-47-120[00m:[01;34m~/repos/torchrec-fork/examples/dlrm[00m$ $TR*[K8
+[38:2:238:76:44mtorchx[0m [2m2022-03-23 03:01:27 INFO    [0m Log files located in: /tmp/torchx_f3ay9ilm/torchx/dlrm_main-rppb3xf5bt7jd/dlrm_main/0
+local_cwd://torchx/dlrm_main-rppb3xf5bt7jd
+[38:2:238:76:44mtorchx[0m [2m2022-03-23 03:01:27 INFO    [0m Waiting for the app to finish...
+[32mdlrm_main/0[0m WARNING:__main__:
+[32mdlrm_main/0[0m *****************************************
+[32mdlrm_main/0[0m Setting OMP_NUM_THREADS environment variable for each process to be 1 in default, to avoid your system being overloaded, please further tune the variable for optimal performance in your application as needed. 
+[32mdlrm_main/0[0m *****************************************
+[32mdlrm_main/0[0m ********************************************************************************
+[32mdlrm_main/0[0m 
+[32mdlrm_main/0[0m *********  RUNNING SETTING 5  *******************  RUNNING SETTING 5  **********
+[32mdlrm_main/0[0m 
+[32mdlrm_main/0[0m ********************************************************************************
+[32mdlrm_main/0[0m 
+[32mdlrm_main/0[0m ************************************************************************************************************************
+[32mdlrm_main/0[0m 
+[32mdlrm_main/0[0m 
+[32mdlrm_main/0[0m *********  RUNNING SETTING 5  *******************  RUNNING SETTING 5  *******************  RUNNING SETTING 5  **********
+[32mdlrm_main/0[0m 
+[32mdlrm_main/0[0m 
+[32mdlrm_main/0[0m ************************************************************************************************************************
+[32mdlrm_main/0[0m 
+[32mdlrm_main/0[0m 
+[32mdlrm_main/0[0m ****************************************
+[32mdlrm_main/0[0m *********  RUNNING SETTING 5  **********
+[32mdlrm_main/0[0m ****************************************
+[32mdlrm_main/0[0m ****************************************
+[32mdlrm_main/0[0m *********  RUNNING SETTING 5  **********
+[32mdlrm_main/0[0m ****************************************
+[32mdlrm_main/0[0m ****************************************
+[32mdlrm_main/0[0m *********  RUNNING SETTING 5  **********
+[32mdlrm_main/0[0m ****************************************
+[32mdlrm_main/0[0m [W socket.cpp:701] The server socket on [ip-172-31-47-120.ec2.internal]:38381 is not yet listening (errno: 111 - Connection refused), will retry.
+[32mdlrm_main/0[0m [W socket.cpp:701] The server socket on [ip-172-31-47-120.ec2.internal]:38381 is not yet listening (errno: 111 - Connection refused), will retry.
+[32mdlrm_main/0[0m [W socket.cpp:701] The server socket on [ip-172-31-47-120.ec2.internal]:38381 is not yet listening (errno: 111 - Connection refused), will retry.
+[32mdlrm_main/0[0m ['--embedding_dim', '128', '--dense_arch_layer_sizes', '512,256,128', '--over_arch_layer_sizes', '1024,1024,512,256,1', '--num_embeddings', '40000000', '--batch_size', '2048', '--num_embeddings_per_feature', '45833188,36746,17245,7413,20243,3,7114,1441,62,29275261,1572176,345138,10,2209,11267,128,4,974,14,48937457,11316796,40094537,452104,12606,104,35', '--epochs', '1', '--in_memory_binary_criteo_path', '/home/ubuntu/mountpoint/criteo_terabyte_subsample0.0_maxind40M', '--pin_memory', '--learning_rate', '1.0']
+[32mdlrm_main/0[0m fname  /home/ubuntu/mountpoint/criteo_terabyte_subsample0.0_maxind40M/day_0_reordered_int.npy
+[32mdlrm_main/0[0m fname  fname /home/ubuntu/mountpoint/criteo_terabyte_subsample0.0_maxind40M/day_11_reordered_int.npy 
+[32mdlrm_main/0[0m /home/ubuntu/mountpoint/criteo_terabyte_subsample0.0_maxind40M/day_1_reordered_int.npy
+[32mdlrm_main/0[0m fname  /home/ubuntu/mountpoint/criteo_terabyte_subsample0.0_maxind40M/day_7_reordered_int.npy
+[32mdlrm_main/0[0m fname  /home/ubuntu/mountpoint/criteo_terabyte_subsample0.0_maxind40M/day_14_reordered_int.npy
+[32mdlrm_main/0[0m fname  /home/ubuntu/mountpoint/criteo_terabyte_subsample0.0_maxind40M/day_17_reordered_int.npy
+[32mdlrm_main/0[0m fname  /home/ubuntu/mountpoint/criteo_terabyte_subsample0.0_maxind40M/day_4_reordered_int.npy
+[32mdlrm_main/0[0m fname  /home/ubuntu/mountpoint/criteo_terabyte_subsample0.0_maxind40M/day_22_reordered_int.npy
+[32mdlrm_main/0[0m fname  /home/ubuntu/mountpoint/criteo_terabyte_subsample0.0_maxind40M/day_12_reordered_int.npy
+[32mdlrm_main/0[0m fname  /home/ubuntu/mountpoint/criteo_terabyte_subsample0.0_maxind40M/day_20_reordered_int.npy
+[32mdlrm_main/0[0m fname  /home/ubuntu/mountpoint/criteo_terabyte_subsample0.0_maxind40M/day_15_reordered_int.npy
+[32mdlrm_main/0[0m fname  /home/ubuntu/mountpoint/criteo_terabyte_subsample0.0_maxind40M/day_18_reordered_int.npy
+[32mdlrm_main/0[0m fname  /home/ubuntu/mountpoint/criteo_terabyte_subsample0.0_maxind40M/day_2_reordered_int.npy
+[32mdlrm_main/0[0m fname  /home/ubuntu/mountpoint/criteo_terabyte_subsample0.0_maxind40M/day_5_reordered_int.npy

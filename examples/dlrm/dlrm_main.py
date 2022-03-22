@@ -27,6 +27,16 @@ from torchrec.modules.embedding_configs import EmbeddingBagConfig
 from torchrec.optim.keyed import CombinedOptimizer, KeyedOptimizerWrapper
 from tqdm import tqdm
 
+from torchrec.mysettings import (
+    ARGV,
+    INT_FEATURE_COUNT,
+    CAT_FEATURE_COUNT,
+    DAYS,
+    SETTING,
+    LOG_FILE,
+    MODEL_EVAL,
+)
+
 
 # OSS import
 try:
@@ -52,6 +62,34 @@ except ImportError:
 
 TRAIN_PIPELINE_STAGES = 3  # Number of stages in TrainPipelineSparseDist.
 
+from torchrec.distributed.embedding_types import EmbeddingComputeKernel
+from torchrec.distributed.embeddingbag import EmbeddingBagCollectionSharder
+from torchrec.distributed.types import ModuleSharder, ShardingType
+import torch.nn as nn
+
+class TWSharder(EmbeddingBagCollectionSharder):
+    def sharding_types(self, compute_device_type: str) -> List[str]:
+        return [
+            ShardingType.DATA_PARALLEL.value,
+            ShardingType.TABLE_WISE.value,
+            ShardingType.COLUMN_WISE.value,
+            ShardingType.ROW_WISE.value,
+            ShardingType.TABLE_ROW_WISE.value,
+            ShardingType.TABLE_COLUMN_WISE.value,
+            ]
+
+    def compute_kernels(
+        self, sharding_type: str, compute_device_type: str
+    ) -> List[str]:
+        return [
+            EmbeddingComputeKernel.DENSE.value, 
+            EmbeddingComputeKernel.SPARSE.value,
+            EmbeddingComputeKernel.BATCHED_DENSE.value,
+            EmbeddingComputeKernel.BATCHED_FUSED.value,
+            EmbeddingComputeKernel.BATCHED_FUSED_UVM.value,
+            EmbeddingComputeKernel.BATCHED_FUSED_UVM_CACHING.value,
+            EmbeddingComputeKernel.BATCHED_QUANT.value,            
+        ]
 
 def parse_args(argv: List[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="torchrec dlrm example trainer")
@@ -192,7 +230,8 @@ def _evaluate(
         None.
     """
     model = train_pipeline._model
-    model.eval()
+    if MODEL_EVAL:
+        model.eval()
     device = train_pipeline._device
     limit_batches = (
         args.limit_val_batches if stage == "val" else args.limit_test_batches
@@ -218,6 +257,7 @@ def _evaluate(
     for _ in tqdm(iter(int, 1), desc=f"Evaluating {stage} set"):
         try:
             _loss, logits, labels = train_pipeline.progress(combined_iterator)
+            labels = labels.int()
             auroc(logits, labels)
             accuracy(logits, labels)
         except StopIteration:
@@ -336,6 +376,7 @@ def main(argv: List[str]) -> None:
     Returns:
         None.
     """
+    argv = ARGV
     args = parse_args(argv)
 
     rank = int(os.environ["LOCAL_RANK"])
@@ -349,6 +390,9 @@ def main(argv: List[str]) -> None:
 
     if not torch.distributed.is_initialized():
         dist.init_process_group(backend=backend)
+
+    if dist.get_rank() == 0:
+        print(argv)        
 
     if args.num_embeddings_per_feature is not None:
         args.num_embeddings_per_feature = list(
