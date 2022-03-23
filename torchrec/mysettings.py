@@ -90,8 +90,8 @@ if SETTING == 4:
 if SETTING == 5:
     MODEL_EVAL = True
     SAVE_DEBUG_DATA = False
-    SAVE_LOSSES = True
-    NP_WEIGHT_INIT = True
+    SAVE_LOSSES = False
+    NP_WEIGHT_INIT = False
     LOG_FILE = "s5.txt"
     INT_FEATURE_COUNT = 13
     #CAT_FEATURE_COUNT = 26 
