@@ -391,13 +391,6 @@ def main(argv: List[str]) -> None:
         )
         args.num_embeddings = None
 
-    # TODO add CriteoIterDataPipe support and add random_dataloader arg
-    # pyre-ignore[16]
-    train_dataloader = get_dataloader(args, backend, "train")
-    # pyre-ignore[16]
-    val_dataloader = get_dataloader(args, backend, "val")
-    # pyre-ignore[16]
-    test_dataloader = get_dataloader(args, backend, "test")
 
     # Sets default limits for random dataloader iterations when left unspecified.
     if args.in_memory_binary_criteo_path is None:
@@ -440,20 +433,33 @@ def main(argv: List[str]) -> None:
     #     EmbeddingBagCollectionSharder(fused_params=fused_params),
     # ]
 
-    model = DistributedModelParallel(
-        module=train_model,
-        device=device,
-        sharders=[
-            cast(
-                ModuleSharder[torch.nn.Module],
-                TestEBCSharder(
-                    sharding_type=ShardingType.TABLE_WISE.value,
-                    kernel_type=EmbeddingComputeKernel.SPARSE.value,
-                    fused_params=fused_params,
-                ),
-            )
-        ],
-    )
+    if True:
+        sharders = TestEBCSharder(
+                        sharding_type=ShardingType.TABLE_WISE.value,
+                        kernel_type=EmbeddingComputeKernel.SPARSE.value,
+                        fused_params=fused_params,
+                    )
+
+        model = DistributedModelParallel(
+            module=train_model,
+            device=device,
+            sharders=[
+                cast(
+                    ModuleSharder[torch.nn.Module],
+                    sharders,
+                )
+            ],
+        )
+    else:
+        sharders = [
+            EmbeddingBagCollectionSharder(fused_params=fused_params),
+        ]
+        model = DistributedModelParallel(
+            module=train_model,
+            device=device,
+            sharders=cast(List[ModuleSharder[nn.Module]], sharders),
+        )
+
     dense_optimizer = KeyedOptimizerWrapper(
         dict(model.named_parameters()),
         lambda params: torch.optim.SGD(params, lr=args.learning_rate),
@@ -465,6 +471,15 @@ def main(argv: List[str]) -> None:
         optimizer,
         device,
     )
+
+    # TODO add CriteoIterDataPipe support and add random_dataloader arg
+    # pyre-ignore[16]
+    train_dataloader = get_dataloader(args, backend, "train")
+    # pyre-ignore[16]
+    val_dataloader = get_dataloader(args, backend, "val")
+    # pyre-ignore[16]
+    test_dataloader = get_dataloader(args, backend, "test")
+
     train_val_test(
         args, train_pipeline, train_dataloader, val_dataloader, test_dataloader
     )

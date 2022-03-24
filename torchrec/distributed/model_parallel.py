@@ -10,6 +10,8 @@ import copy
 from collections import OrderedDict
 from typing import Dict, Any, Optional, cast, List, Tuple, Iterator
 
+import os
+
 import torch
 import torch.distributed as dist
 from torch import nn
@@ -201,7 +203,9 @@ class DistributedModelParallel(nn.Module, FusedOptimizerModule):
         if plan is None:
             planner = EmbeddingShardingPlanner(
                 topology=Topology(
-                    world_size=self._env.world_size, compute_device=self.device.type
+                    local_world_size=int(os.environ["LOCAL_WORLD_SIZE"]),
+                    world_size=self._env.world_size, 
+                    compute_device=self.device.type
                 )
             )
             pg = self._env.process_group
