@@ -369,6 +369,9 @@ def main(argv: List[str]) -> None:
     args = parse_args(argv)
 
     rank = int(os.environ["LOCAL_RANK"])
+    if rank == 0:
+        print(argv)
+
     if torch.cuda.is_available():
         device: torch.device = torch.device(f"cuda:{rank}")
         backend = "nccl"
@@ -379,9 +382,6 @@ def main(argv: List[str]) -> None:
 
     if not torch.distributed.is_initialized():
         dist.init_process_group(backend=backend)
-
-    if dist.get_rank() == 0:
-        print(argv)        
 
     if args.num_embeddings_per_feature is not None:
         args.num_embeddings_per_feature = list(
