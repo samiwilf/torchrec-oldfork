@@ -534,6 +534,11 @@ def main(argv: List[str]) -> None:
     )
     optimizer = CombinedOptimizer([model.fused_optimizer, dense_optimizer])
 
+    for collectionkey, plans in model._plan.plan.items():
+        print(collectionkey)
+        for key, plan in plans.items():
+            print(key, "\n", plan, "\n")
+
     train_pipeline = TrainPipelineSparseDist(
         model,
         optimizer,
