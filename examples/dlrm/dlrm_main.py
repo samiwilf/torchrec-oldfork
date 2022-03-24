@@ -68,41 +68,36 @@ from torchrec.distributed.types import ModuleSharder, ShardingType
 import torch.nn as nn
 
 class TestEBCSharder(EmbeddingBagCollectionSharder):
-        def __init__(
-            self,
-            sharding_type: str,
-            kernel_type: str,
-            fused_params: Optional[Dict[str, Any]] = None,
-        ) -> None:
-            if fused_params is None:
-                fused_params = {}
-            self._sharding_type = sharding_type
-            self._kernel_type = kernel_type
-            self._fused_params = fused_params
+    def __init__(
+        self,
+        sharding_type: str,
+        kernel_type: str,
+        fused_params: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        if fused_params is None:
+            fused_params = {}
+        self._sharding_type = sharding_type
+        self._kernel_type = kernel_type
+        self._fused_params = fused_params
+    """
+    Restricts sharding to single type only.
+    """
 
-class TWSharder(EmbeddingBagCollectionSharder):
     def sharding_types(self, compute_device_type: str) -> List[str]:
-        return [
-            ShardingType.DATA_PARALLEL.value,
-            ShardingType.TABLE_WISE.value,
-            ShardingType.COLUMN_WISE.value,
-            ShardingType.ROW_WISE.value,
-            ShardingType.TABLE_ROW_WISE.value,
-            ShardingType.TABLE_COLUMN_WISE.value,
-            ]
+        return [self._sharding_type]     
+
+    """
+    Restricts to single impl.
+    """
 
     def compute_kernels(
         self, sharding_type: str, compute_device_type: str
     ) -> List[str]:
-        return [
-            EmbeddingComputeKernel.DENSE.value, 
-            EmbeddingComputeKernel.SPARSE.value,
-            # EmbeddingComputeKernel.BATCHED_DENSE.value,
-            # EmbeddingComputeKernel.BATCHED_FUSED.value,
-            # EmbeddingComputeKernel.BATCHED_FUSED_UVM.value,
-            # EmbeddingComputeKernel.BATCHED_FUSED_UVM_CACHING.value,
-            # EmbeddingComputeKernel.BATCHED_QUANT.value,            
-        ]            
+        return [self._kernel_type]
+
+    @property
+    def fused_params(self) -> Optional[Dict[str, Any]]:
+        return self._fused_params        
 
 def parse_args(argv: List[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="torchrec dlrm example trainer")
@@ -267,6 +262,7 @@ def _evaluate(
     accuracy = metrics.Accuracy(compute_on_step=False).to(device)
 
     # Infinite iterator instead of while-loop to leverage tqdm progress bar.
+    count = 0
     for _ in tqdm(iter(int, 1), desc=f"Evaluating {stage} set"):
         try:
             _loss, logits, labels = train_pipeline.progress(combined_iterator)
@@ -275,7 +271,14 @@ def _evaluate(
             #accuracy(logits, labels)             
             nn_output = torch.sigmoid(logits)
             auroc(nn_output, labels)
-            accuracy(nn_output, labels)           
+            accuracy(nn_output, labels)
+            if count % 10000 == 0:         
+                auroc_result = auroc.compute().item()
+                accuracy_result = accuracy.compute().item()
+                if dist.get_rank() == 0:
+                    print(f"AUROC over {stage} set: {auroc_result}.")
+                    print(f"Accuracy over {stage} set: {accuracy_result}.")
+            count += 1       
         except StopIteration:
             break
     auroc_result = auroc.compute().item()
@@ -461,14 +464,11 @@ def main(argv: List[str]) -> None:
     # ]
 
     if True:
-        if False:
-            sharders = TestEBCSharder(
-                            sharding_type=ShardingType.TABLE_WISE.value,
-                            kernel_type=EmbeddingComputeKernel.SPARSE.value,
-                            fused_params=fused_params,
-                        )
-        else:
-            sharders = TWSharder()
+        sharders = TestEBCSharder(
+                        sharding_type=ShardingType.TABLE_WISE.value,
+                        kernel_type=EmbeddingComputeKernel.DENSE.value,
+                        fused_params=fused_params,
+                    )
 
         model = DistributedModelParallel(
             module=train_model,
@@ -495,6 +495,11 @@ def main(argv: List[str]) -> None:
         lambda params: torch.optim.SGD(params, lr=args.learning_rate),
     )
     optimizer = CombinedOptimizer([model.fused_optimizer, dense_optimizer])
+
+    for collectionkey, plans in model._plan.plan.items():
+        print(collectionkey)
+        for key, plan in plans.items():
+            print(key, "\n", plan, "\n")    
 
     train_pipeline = TrainPipelineSparseDist(
         model,
