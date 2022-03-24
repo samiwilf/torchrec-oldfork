@@ -460,7 +460,7 @@ def main(argv: List[str]) -> None:
     #     EmbeddingBagCollectionSharder(fused_params=fused_params),
     # ]
 
-    if True:
+    if False:
         if False:
             sharders = TestEBCSharder(
                             sharding_type=ShardingType.TABLE_WISE.value,
