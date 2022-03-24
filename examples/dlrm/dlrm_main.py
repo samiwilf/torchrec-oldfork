@@ -247,8 +247,8 @@ def _evaluate(
         try:
             _loss, logits, labels = train_pipeline.progress(combined_iterator)
             labels = labels.int()
-            auroc(logits, labels)
-            accuracy(logits, labels)             
+            #auroc(logits, labels)
+            #accuracy(logits, labels)             
             nn_output = torch.sigmoid(logits)
             auroc(nn_output, labels)
             accuracy(nn_output, labels)           
