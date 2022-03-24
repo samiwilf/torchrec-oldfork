@@ -96,7 +96,7 @@ class TestEBCSharder(EmbeddingBagCollectionSharder):
                 EmbeddingComputeKernel.BATCHED_FUSED_UVM.value,
                 EmbeddingComputeKernel.BATCHED_FUSED_UVM_CACHING.value,
                 EmbeddingComputeKernel.BATCHED_QUANT.value,    
-        ]
+            ]
     """
     Restricts sharding to single type only.
     """
@@ -498,7 +498,7 @@ def main(argv: List[str]) -> None:
     #     EmbeddingBagCollectionSharder(fused_params=fused_params),
     # ]
 
-    if True:
+    if False:
         if True:
             sharders = TestEBCSharder(
                             sharding_type=ShardingType.TABLE_WISE.value,
