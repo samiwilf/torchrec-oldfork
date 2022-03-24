@@ -71,13 +71,14 @@ class DLRMTrain(nn.Module):
             over_arch_layer_sizes=over_arch_layer_sizes,
             dense_device=dense_device,
         )
-        self.loss_fn: nn.Module = nn.BCEWithLogitsLoss()
+        #self.loss_fn: nn.Module = nn.BCEWithLogitsLoss()
+        self.loss_fn: nn.Module = nn.BCELoss()
 
     def forward(
         self, batch: Batch
     ) -> Tuple[torch.Tensor, Tuple[torch.Tensor, torch.Tensor, torch.Tensor]]:
         logits = self.model(batch.dense_features, batch.sparse_features)
         logits = logits.squeeze()
-        loss = self.loss_fn(logits, batch.labels.float())
+        loss = self.loss_fn(torch.nn.functional.sigmoid(logits), batch.labels.float())
 
         return loss, (loss.detach(), logits.detach(), batch.labels.detach())

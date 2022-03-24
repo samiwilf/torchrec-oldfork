@@ -465,8 +465,8 @@ def main(argv: List[str]) -> None:
 
     if True:
         sharders = TestEBCSharder(
-                        sharding_type=ShardingType.TABLE_WISE.value,
-                        kernel_type=EmbeddingComputeKernel.DENSE.value,
+                        sharding_type=ShardingType.TABLE_COLUMN_WISE.value,
+                        kernel_type=EmbeddingComputeKernel.SPARSE.value,
                         fused_params=fused_params,
                     )
 
