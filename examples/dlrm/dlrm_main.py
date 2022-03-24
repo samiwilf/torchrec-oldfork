@@ -248,7 +248,10 @@ def _evaluate(
             _loss, logits, labels = train_pipeline.progress(combined_iterator)
             labels = labels.int()
             auroc(logits, labels)
-            accuracy(logits, labels)
+            accuracy(logits, labels)             
+            nn_output = torch.sigmoid(logits)
+            auroc(nn_output, labels)
+            accuracy(nn_output, labels)           
         except StopIteration:
             break
     auroc_result = auroc.compute().item()
