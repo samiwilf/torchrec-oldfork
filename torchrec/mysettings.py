@@ -120,7 +120,7 @@ COMMON_ARGV = [
     '--in_memory_binary_criteo_path', '/home/ubuntu/mountpoint/criteo_terabyte_subsample0.0_maxind40M',
     '--pin_memory',
     '--learning_rate', '1.0',
-    '--num_workers', '1',
+    '--num_workers', '8',
 ]
 
 if SETTING != 5 and SETTING != 4:
