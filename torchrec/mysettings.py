@@ -5,7 +5,7 @@
 import pathlib
 
 LOG_PATH = "/home/ubuntu/repos/torchrec-fork/examples/dlrm/"
-SETTING = 4
+SETTING = 5
 
 print('*'.center(40, '*'))
 print(f"  RUNNING SETTING {SETTING}  ".center(40, '*'))
