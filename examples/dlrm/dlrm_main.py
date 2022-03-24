@@ -9,7 +9,7 @@ import argparse
 import itertools
 import os
 import sys
-from typing import cast, Iterator, List
+from typing import cast, Iterator, List, Optional, Dict, Any
 
 import torch
 import torchmetrics as metrics
@@ -67,29 +67,18 @@ from torchrec.distributed.embeddingbag import EmbeddingBagCollectionSharder
 from torchrec.distributed.types import ModuleSharder, ShardingType
 import torch.nn as nn
 
-class TWSharder(EmbeddingBagCollectionSharder):
-    def sharding_types(self, compute_device_type: str) -> List[str]:
-        return [
-            ShardingType.DATA_PARALLEL.value,
-            ShardingType.TABLE_WISE.value,
-            ShardingType.COLUMN_WISE.value,
-            ShardingType.ROW_WISE.value,
-            ShardingType.TABLE_ROW_WISE.value,
-            ShardingType.TABLE_COLUMN_WISE.value,
-            ]
-
-    def compute_kernels(
-        self, sharding_type: str, compute_device_type: str
-    ) -> List[str]:
-        return [
-            EmbeddingComputeKernel.DENSE.value, 
-            EmbeddingComputeKernel.SPARSE.value,
-            EmbeddingComputeKernel.BATCHED_DENSE.value,
-            EmbeddingComputeKernel.BATCHED_FUSED.value,
-            EmbeddingComputeKernel.BATCHED_FUSED_UVM.value,
-            EmbeddingComputeKernel.BATCHED_FUSED_UVM_CACHING.value,
-            EmbeddingComputeKernel.BATCHED_QUANT.value,            
-        ]
+class TestEBCSharder(EmbeddingBagCollectionSharder):
+        def __init__(
+            self,
+            sharding_type: str,
+            kernel_type: str,
+            fused_params: Optional[Dict[str, Any]] = None,
+        ) -> None:
+            if fused_params is None:
+                fused_params = {}
+            self._sharding_type = sharding_type
+            self._kernel_type = kernel_type
+            self._fused_params = fused_params
 
 def parse_args(argv: List[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="torchrec dlrm example trainer")
@@ -452,7 +441,16 @@ def main(argv: List[str]) -> None:
     model = DistributedModelParallel(
         module=train_model,
         device=device,
-        sharders=cast(List[ModuleSharder[nn.Module]], sharders),
+        sharders=[
+            cast(
+                ModuleSharder[torch.nn.Module],
+                TestEBCSharder(
+                    sharding_type=ShardingType.TABLE_WISE.value,
+                    kernel_type=EmbeddingComputeKernel.SPARSE.value,
+                    fused_params=fused_params,
+                ),
+            )
+        ],
     )
     dense_optimizer = KeyedOptimizerWrapper(
         dict(model.named_parameters()),

@@ -5,7 +5,7 @@
 import pathlib
 
 LOG_PATH = "/home/ubuntu/repos/torchrec-fork/examples/dlrm/"
-SETTING = 5
+SETTING = 4
 
 print('*'.center(40, '*'))
 print(f"  RUNNING SETTING {SETTING}  ".center(40, '*'))
@@ -72,8 +72,8 @@ if SETTING == 3:
 if SETTING == 4:
     MODEL_EVAL = True
     SAVE_DEBUG_DATA = False
-    SAVE_LOSSES = True
-    NP_WEIGHT_INIT = True
+    SAVE_LOSSES = False
+    NP_WEIGHT_INIT = False
     LOG_FILE = "s4.txt"
     INT_FEATURE_COUNT = 13
     DAYS = 1
