@@ -269,7 +269,7 @@ def _evaluate(
             labels = labels.int()
             #auroc(logits, labels)
             #accuracy(logits, labels)             
-            nn_output = torch.sigmoid(logits)
+            nn_output = torch.nn.functional.sigmoid(logits)
             auroc(nn_output, labels)
             accuracy(nn_output, labels)
             if count % 10000 == 0:         
