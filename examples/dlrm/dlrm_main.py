@@ -371,7 +371,7 @@ def main(argv: List[str]) -> None:
     rank = int(os.environ["LOCAL_RANK"])
     if rank == 0:
         print(argv)
-    print(f"My rank is: {rank}")
+    print(f"My local rank is: {rank}")
 
     if torch.cuda.is_available():
         device: torch.device = torch.device(f"cuda:{rank}")
@@ -383,6 +383,8 @@ def main(argv: List[str]) -> None:
 
     if not torch.distributed.is_initialized():
         dist.init_process_group(backend=backend)
+
+    print(f"My local rank is: {rank}. \t My global rank is: {dist.get_rank()}")
 
     if args.num_embeddings_per_feature is not None:
         args.num_embeddings_per_feature = list(
