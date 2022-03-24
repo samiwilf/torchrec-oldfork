@@ -89,13 +89,13 @@ class TestEBCSharder(EmbeddingBagCollectionSharder):
                 ShardingType.TABLE_COLUMN_WISE.value,
                 ]  
             self._kernel_type = [
-                # EmbeddingComputeKernel.DENSE.value, 
+                EmbeddingComputeKernel.DENSE.value, 
                 EmbeddingComputeKernel.SPARSE.value,
-                # EmbeddingComputeKernel.BATCHED_DENSE.value,
-                # EmbeddingComputeKernel.BATCHED_FUSED.value,
-                # EmbeddingComputeKernel.BATCHED_FUSED_UVM.value,
-                # EmbeddingComputeKernel.BATCHED_FUSED_UVM_CACHING.value,
-                # EmbeddingComputeKernel.BATCHED_QUANT.value,    
+                EmbeddingComputeKernel.BATCHED_DENSE.value,
+                EmbeddingComputeKernel.BATCHED_FUSED.value,
+                EmbeddingComputeKernel.BATCHED_FUSED_UVM.value,
+                EmbeddingComputeKernel.BATCHED_FUSED_UVM_CACHING.value,
+                EmbeddingComputeKernel.BATCHED_QUANT.value,    
         ]
     """
     Restricts sharding to single type only.
