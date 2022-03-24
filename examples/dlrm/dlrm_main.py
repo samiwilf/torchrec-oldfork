@@ -76,40 +76,33 @@ class TestEBCSharder(EmbeddingBagCollectionSharder):
     ) -> None:
         if fused_params is None:
             fused_params = {}
-        # self._sharding_type = sharding_type
-        # self._kernel_type = kernel_type
+        self._sharding_type = sharding_type
+        self._kernel_type = kernel_type
         self._fused_params = fused_params
-        self._sharding_type = [
-            ShardingType.DATA_PARALLEL.value,
-            ShardingType.TABLE_WISE.value,
-            ShardingType.COLUMN_WISE.value,
-            ShardingType.ROW_WISE.value,
-            ShardingType.TABLE_ROW_WISE.value,
-            ShardingType.TABLE_COLUMN_WISE.value,
-            ]  
-        self._kernel_type = [
-            # EmbeddingComputeKernel.DENSE.value, 
-            EmbeddingComputeKernel.SPARSE.value,
-            # EmbeddingComputeKernel.BATCHED_DENSE.value,
-            # EmbeddingComputeKernel.BATCHED_FUSED.value,
-            # EmbeddingComputeKernel.BATCHED_FUSED_UVM.value,
-            # EmbeddingComputeKernel.BATCHED_FUSED_UVM_CACHING.value,
-            # EmbeddingComputeKernel.BATCHED_QUANT.value,    
+        if False:
+            self._sharding_type = [
+                ShardingType.DATA_PARALLEL.value,
+                ShardingType.TABLE_WISE.value,
+                ShardingType.COLUMN_WISE.value,
+                ShardingType.ROW_WISE.value,
+                ShardingType.TABLE_ROW_WISE.value,
+                ShardingType.TABLE_COLUMN_WISE.value,
+                ]  
+            self._kernel_type = [
+                # EmbeddingComputeKernel.DENSE.value, 
+                EmbeddingComputeKernel.SPARSE.value,
+                # EmbeddingComputeKernel.BATCHED_DENSE.value,
+                # EmbeddingComputeKernel.BATCHED_FUSED.value,
+                # EmbeddingComputeKernel.BATCHED_FUSED_UVM.value,
+                # EmbeddingComputeKernel.BATCHED_FUSED_UVM_CACHING.value,
+                # EmbeddingComputeKernel.BATCHED_QUANT.value,    
         ]
     """
     Restricts sharding to single type only.
     """
 
     def sharding_types(self, compute_device_type: str) -> List[str]:
-        #return [self._sharding_type]
-        return [
-            ShardingType.DATA_PARALLEL.value,
-            ShardingType.TABLE_WISE.value,
-            ShardingType.COLUMN_WISE.value,
-            ShardingType.ROW_WISE.value,
-            ShardingType.TABLE_ROW_WISE.value,
-            ShardingType.TABLE_COLUMN_WISE.value,
-            ]        
+        return [self._sharding_type]     
 
     """
     Restricts to single impl.
@@ -118,16 +111,7 @@ class TestEBCSharder(EmbeddingBagCollectionSharder):
     def compute_kernels(
         self, sharding_type: str, compute_device_type: str
     ) -> List[str]:
-        #return [self._kernel_type]
-        return [
-            EmbeddingComputeKernel.DENSE.value, 
-            EmbeddingComputeKernel.SPARSE.value,
-            # EmbeddingComputeKernel.BATCHED_DENSE.value,
-            # EmbeddingComputeKernel.BATCHED_FUSED.value,
-            # EmbeddingComputeKernel.BATCHED_FUSED_UVM.value,
-            # EmbeddingComputeKernel.BATCHED_FUSED_UVM_CACHING.value,
-            # EmbeddingComputeKernel.BATCHED_QUANT.value,    
-        ]
+        return [self._kernel_type]
 
     @property
     def fused_params(self) -> Optional[Dict[str, Any]]:
