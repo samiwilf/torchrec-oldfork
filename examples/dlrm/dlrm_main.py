@@ -371,6 +371,7 @@ def main(argv: List[str]) -> None:
     rank = int(os.environ["LOCAL_RANK"])
     if rank == 0:
         print(argv)
+    print(f"My rank is: {rank}")
 
     if torch.cuda.is_available():
         device: torch.device = torch.device(f"cuda:{rank}")
@@ -434,9 +435,9 @@ def main(argv: List[str]) -> None:
     fused_params = {
         "learning_rate": args.learning_rate,
     }
-    sharders = [
-        EmbeddingBagCollectionSharder(fused_params=fused_params),
-    ]
+    # sharders = [
+    #     EmbeddingBagCollectionSharder(fused_params=fused_params),
+    # ]
 
     model = DistributedModelParallel(
         module=train_model,
