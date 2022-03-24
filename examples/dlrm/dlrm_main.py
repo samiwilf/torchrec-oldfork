@@ -102,7 +102,7 @@ class TestEBCSharder(EmbeddingBagCollectionSharder):
     """
 
     def sharding_types(self, compute_device_type: str) -> List[str]:
-        return [self._sharding_type]     
+        return self._sharding_type     
 
     """
     Restricts to single impl.
@@ -111,7 +111,7 @@ class TestEBCSharder(EmbeddingBagCollectionSharder):
     def compute_kernels(
         self, sharding_type: str, compute_device_type: str
     ) -> List[str]:
-        return [self._kernel_type]
+        return self._kernel_type
 
     @property
     def fused_params(self) -> Optional[Dict[str, Any]]:
