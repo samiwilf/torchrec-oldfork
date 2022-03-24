@@ -76,10 +76,10 @@ class TestEBCSharder(EmbeddingBagCollectionSharder):
     ) -> None:
         if fused_params is None:
             fused_params = {}
-        self._sharding_type = sharding_type
-        self._kernel_type = kernel_type
+        # self._sharding_type = sharding_type
+        # self._kernel_type = kernel_type
         self._fused_params = fused_params
-        if False:
+        if True:
             self._sharding_type = [
                 ShardingType.DATA_PARALLEL.value,
                 ShardingType.TABLE_WISE.value,
