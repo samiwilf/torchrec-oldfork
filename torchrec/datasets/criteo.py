@@ -438,7 +438,7 @@ class BinaryCriteoUtils:
                 tensor([6., 6., 6., 8., 8., 8., 7., 7., 7., 6., 6., 6., 5., 5., 5.],
                     device='cuda:0')
                 """              
-            if SETTING == 4 or SETTING == 5:
+            if mysettings.NEW_DATASET == False and (SETTING == 4 or SETTING == 5):
                 data = np.fromfile(fin, dtype=dtype, count=num_entries)
                 if '_cat' in fname:
                     data = data.astype(np.int64)
@@ -446,6 +446,8 @@ class BinaryCriteoUtils:
                     data = data.astype(np.float32)
                 if '_int' in fname:
                     data = np.log(data + 1)
+            elif mysettings.NEW_DATASET and (SETTING == 4 or SETTING == 5):
+                data = np.fromfile(fin, dtype=dtype, count=num_entries)
                                 
             return data.reshape((num_rows, row_size))
 

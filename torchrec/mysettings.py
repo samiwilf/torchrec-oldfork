@@ -17,6 +17,7 @@ D_OUT_LOG_FILE = pathlib.Path(LOG_PATH + "s" + str(SETTING) + "_D_OUT.txt")
 E_OUT_LOG_FILE = pathlib.Path(LOG_PATH + "s" + str(SETTING) + "_E_OUT.txt")
 C_OUT_LOG_FILE = pathlib.Path(LOG_PATH + "s" + str(SETTING) + "_C_OUT.txt")
 
+
 if SETTING == 1:
     MODEL_EVAL = False
     SAVE_DEBUG_DATA = False
@@ -84,10 +85,10 @@ if SETTING == 4:
         '--embedding_dim', f'{EMB_DIM}', 
         '--dense_arch_layer_sizes', f'512,256,{EMB_DIM}', 
         '--over_arch_layer_sizes', '1024,1024,512,256,1', 
-        "--num_embeddings", '40000000',
     ]
 
 if SETTING == 5:
+    NEW_DATASET = True
     MODEL_EVAL = True
     SAVE_DEBUG_DATA = False
     SAVE_LOSSES = False
@@ -98,13 +99,22 @@ if SETTING == 5:
     DAYS = 24
     BATCH_SIZE = 2048
     EMB_DIM = 128
-    LN_EMB=[45833188,36746,17245,7413,20243,3,7114,1441,62,29275261,1572176,345138,10,2209,11267,128,4,974,14,48937457,11316796,40094537,452104,12606,104,35]
+
+    #maxim's version
+    # LN_EMB=[45833188,36746,17245,7413,20243,3,7114,1441,62,29275261,1572176,345138,10,2209,11267,128,4,974,14,48937457,11316796,40094537,452104,12606,104,35]
+
+    #mlperf
+    LN_EMB = [40000000,39060,17295,7424,20265,3,7122,1543,63,40000000,3067956,405282,10,2209,11938,155,4,976,14,40000000,40000000,40000000,590152,12973,108,36]
+
     ARGV = [ 
         '--embedding_dim', f'{EMB_DIM}', 
         '--dense_arch_layer_sizes', f'512,256,{EMB_DIM}', 
         '--over_arch_layer_sizes', '1024,1024,512,256,1',
-        "--num_embeddings", '40000000',
     ]
+    ARGV += (['--in_memory_binary_criteo_path', '/home/ubuntu/mountpoint/1tb_numpy',] 
+        if NEW_DATASET 
+        else ['--in_memory_binary_criteo_path', '/home/ubuntu/mountpoint/criteo_terabyte_subsample0.0_maxind40M',])
+    
 
 LOG_FILE = pathlib.Path(LOG_PATH + LOG_FILE)
 for f in [LOG_FILE, DENSE_LOG_FILE, SPARSE_LOG_FILE, D_OUT_LOG_FILE, E_OUT_LOG_FILE, C_OUT_LOG_FILE]:
@@ -117,7 +127,7 @@ COMMON_ARGV = [
     '--batch_size', str(BATCH_SIZE),
     '--num_embeddings_per_feature', ','.join([str(x) for x in LN_EMB]),
     '--epochs', '1',
-    '--in_memory_binary_criteo_path', '/home/ubuntu/mountpoint/criteo_terabyte_subsample0.0_maxind40M',
+    # '--in_memory_binary_criteo_path', '/home/ubuntu/mountpoint/criteo_terabyte_subsample0.0_maxind40M',
     '--pin_memory',
     '--learning_rate', '1.0',
     '--num_workers', '8',

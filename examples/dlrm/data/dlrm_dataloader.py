@@ -20,6 +20,8 @@ from torchrec.datasets.criteo import (
 )
 from torchrec.datasets.random import RandomRecDataset
 
+import torchrec.mysettings as mysettings
+
 STAGES = ["train", "val", "test"]
 
 
@@ -71,8 +73,13 @@ def _get_in_memory_dataloader(
         world_size = dist.get_world_size() * 2
 
     npys_list = ["_reordered_int", "_reordered_cat", "_reordered_y"]
+    if mysettings.NEW_DATASET:
+        npys_list = ["dense", "sparse", "labels"]
+
     if DAYS == 1:
         npys_list = ["_0_reordered_int", "_0_reordered_cat", "_0_reordered_y"]
+        if mysettings.NEW_DATASET:
+            npys_list = ["_0_dense", "_0_sparse", "_0_labels"]
     stage_files: List[List[str]] = [
         sorted(
             map(

@@ -70,8 +70,8 @@ import torch.nn as nn
 class TestEBCSharder(EmbeddingBagCollectionSharder):
     def __init__(
         self,
-        sharding_type: str,
-        kernel_type: str,
+        #sharding_type: str,
+        #kernel_type: str,
         fused_params: Optional[Dict[str, Any]] = None,
     ) -> None:
         if fused_params is None:
@@ -82,20 +82,20 @@ class TestEBCSharder(EmbeddingBagCollectionSharder):
         if True:
             self._sharding_type = [
                 #ShardingType.DATA_PARALLEL.value,
-                #ShardingType.TABLE_WISE.value,
+                ShardingType.TABLE_WISE.value,
                 #ShardingType.COLUMN_WISE.value,
                 #ShardingType.ROW_WISE.value,
-                ShardingType.TABLE_ROW_WISE.value,
+                #ShardingType.TABLE_ROW_WISE.value,
                 #ShardingType.TABLE_COLUMN_WISE.value,
                 ]  
             self._kernel_type = [
                 #EmbeddingComputeKernel.DENSE.value, 
                 EmbeddingComputeKernel.SPARSE.value,
-                EmbeddingComputeKernel.BATCHED_DENSE.value,
-                EmbeddingComputeKernel.BATCHED_FUSED.value,
-                EmbeddingComputeKernel.BATCHED_FUSED_UVM.value,
-                EmbeddingComputeKernel.BATCHED_FUSED_UVM_CACHING.value,
-                EmbeddingComputeKernel.BATCHED_QUANT.value,    
+                #EmbeddingComputeKernel.BATCHED_DENSE.value,
+                #EmbeddingComputeKernel.BATCHED_FUSED.value,
+                #EmbeddingComputeKernel.BATCHED_FUSED_UVM.value,
+                #EmbeddingComputeKernel.BATCHED_FUSED_UVM_CACHING.value,
+                #EmbeddingComputeKernel.BATCHED_QUANT.value,    
             ]
     """
     Restricts sharding to single type only.
@@ -225,6 +225,12 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
         default=False,
         help="Shuffle each batch during training.",
     )
+    parser.add_argument(
+        "--validation_freq_within_epoch",
+        type=int,
+        default=None,
+        help="Frequency at which validation will be run within an epoch.",
+    )
     parser.set_defaults(pin_memory=None)
     return parser.parse_args(argv)
 
@@ -280,7 +286,6 @@ def _evaluate(
     accuracy = metrics.Accuracy(compute_on_step=False).to(device)
 
     # Infinite iterator instead of while-loop to leverage tqdm progress bar.
-    count = 0
     for _ in tqdm(iter(int, 1), desc=f"Evaluating {stage} set"):
         try:
             _loss, logits, labels = train_pipeline.progress(combined_iterator)
@@ -289,14 +294,7 @@ def _evaluate(
             #accuracy(logits, labels)             
             nn_output = torch.nn.functional.sigmoid(logits)
             auroc(nn_output, labels)
-            accuracy(nn_output, labels)
-            if count % 10000 == 0:         
-                auroc_result = auroc.compute().item()
-                accuracy_result = accuracy.compute().item()
-                if dist.get_rank() == 0:
-                    print(f"AUROC over {stage} set: {auroc_result}.")
-                    print(f"Accuracy over {stage} set: {accuracy_result}.")
-            count += 1       
+            accuracy(nn_output, labels)      
         except StopIteration:
             break
     auroc_result = auroc.compute().item()
@@ -311,6 +309,7 @@ def _train(
     train_pipeline: TrainPipelineSparseDist,
     iterator: Iterator[Batch],
     next_iterator: Iterator[Batch],
+    within_epoch_val_dataloader: DataLoader,
     epoch: int,
 ) -> None:
     """
@@ -352,9 +351,23 @@ def _train(
     )
 
     # Infinite iterator instead of while-loop to leverage tqdm progress bar.
+    it = 0
     for _ in tqdm(iter(int, 1), desc=f"Epoch {epoch}"):
         try:
             train_pipeline.progress(combined_iterator)
+            if (
+                args.validation_freq_within_epoch
+                and it % args.validation_freq_within_epoch == 0
+            ):
+                _evaluate(
+                    args,
+                    train_pipeline,
+                    iter(within_epoch_val_dataloader),
+                    iterator,
+                    "val",
+                )
+
+            it += 1
         except StopIteration:
             break
 
@@ -387,7 +400,9 @@ def train_val_test(
     test_iterator = iter(test_dataloader)
     for epoch in range(args.epochs):
         val_iterator = iter(val_dataloader)
-        _train(args, train_pipeline, train_iterator, val_iterator, epoch)
+        _train(
+            args, train_pipeline, train_iterator, val_iterator, val_dataloader, epoch
+        )
         train_iterator = iter(train_dataloader)
         val_next_iterator = (
             test_iterator if epoch == args.epochs - 1 else train_iterator
@@ -477,14 +492,9 @@ def main(argv: List[str]) -> None:
     fused_params = {
         "learning_rate": args.learning_rate,
     }
-    # sharders = [
-    #     EmbeddingBagCollectionSharder(fused_params=fused_params),
-    # ]
 
     if True:
         sharders = TestEBCSharder(
-                        sharding_type=ShardingType.TABLE_COLUMN_WISE.value,
-                        kernel_type=EmbeddingComputeKernel.SPARSE.value,
                         fused_params=fused_params,
                     )
 
@@ -514,10 +524,11 @@ def main(argv: List[str]) -> None:
     )
     optimizer = CombinedOptimizer([model.fused_optimizer, dense_optimizer])
 
-    for collectionkey, plans in model._plan.plan.items():
-        print(collectionkey)
-        for key, plan in plans.items():
-            print(key, "\n", plan, "\n")    
+    if rank == 0:
+        for collectionkey, plans in model._plan.plan.items():
+            print(collectionkey)
+            for key, plan in plans.items():
+                print(key, "\n", plan, "\n")    
 
     train_pipeline = TrainPipelineSparseDist(
         model,
