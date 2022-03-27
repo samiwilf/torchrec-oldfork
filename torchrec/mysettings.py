@@ -131,6 +131,7 @@ COMMON_ARGV = [
     '--pin_memory',
     '--learning_rate', '1.0',
     '--num_workers', '8',
+    '--validation_freq_within_epoch','10000'
 ]
 
 if SETTING != 5 and SETTING != 4:
