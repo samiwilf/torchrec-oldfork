@@ -88,7 +88,8 @@ if SETTING == 4:
     ]
 
 if SETTING == 5:
-    NEW_DATASET = True
+    NEW_DATASET = False
+    MLPERF = False
     MODEL_EVAL = True
     SAVE_DEBUG_DATA = False
     SAVE_LOSSES = False
@@ -100,18 +101,20 @@ if SETTING == 5:
     BATCH_SIZE = 2048
     EMB_DIM = 128
 
-    #maxim's version
-    # LN_EMB=[45833188,36746,17245,7413,20243,3,7114,1441,62,29275261,1572176,345138,10,2209,11267,128,4,974,14,48937457,11316796,40094537,452104,12606,104,35]
-
     #mlperf
-    LN_EMB = [40000000,39060,17295,7424,20265,3,7122,1543,63,40000000,3067956,405282,10,2209,11938,155,4,976,14,40000000,40000000,40000000,590152,12973,108,36]
+    if MLPERF:
+        LN_EMB = [40000000,39060,17295,7424,20265,3,7122,1543,63,40000000,3067956,405282,10,2209,11938,155,4,976,14,40000000,40000000,40000000,590152,12973,108,36]
+    else:
+        #maxim's version
+        LN_EMB=[45833188,36746,17245,7413,20243,3,7114,1441,62,29275261,1572176,345138,10,2209,11267,128,4,974,14,48937457,11316796,40094537,452104,12606,104,35]
+
 
     ARGV = [ 
         '--embedding_dim', f'{EMB_DIM}', 
         '--dense_arch_layer_sizes', f'512,256,{EMB_DIM}', 
         '--over_arch_layer_sizes', '1024,1024,512,256,1',
     ]
-    ARGV += (['--in_memory_binary_criteo_path', '/home/ubuntu/mountpoint/1tb_numpy',] 
+    ARGV += (['--shuffle_batches', 'True', '--in_memory_binary_criteo_path', '/home/ubuntu/mountpoint/1tb_numpy',] 
         if NEW_DATASET 
         else ['--in_memory_binary_criteo_path', '/home/ubuntu/mountpoint/criteo_terabyte_subsample0.0_maxind40M',])
     
@@ -131,7 +134,7 @@ COMMON_ARGV = [
     '--pin_memory',
     '--learning_rate', '1.0',
     '--num_workers', '8',
-    '--validation_freq_within_epoch','10000'
+    '--validation_freq_within_epoch','50000'
 ]
 
 if SETTING != 5 and SETTING != 4:
