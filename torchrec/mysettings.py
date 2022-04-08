@@ -90,11 +90,11 @@ if SETTING == 4:
 if SETTING == 5:
     NEW_DATASET = False
     MLPERF = False
-    MODEL_EVAL = True
+    MODEL_EVAL = False
     SAVE_DEBUG_DATA = False
-    SAVE_LOSSES = False
+    SAVE_LOSSES = True
     NP_WEIGHT_INIT = False
-    LOG_FILE = "s5.txt"
+    LOG_FILE = "losses5.txt"
     INT_FEATURE_COUNT = 13
     #CAT_FEATURE_COUNT = 26 
     DAYS = 24
