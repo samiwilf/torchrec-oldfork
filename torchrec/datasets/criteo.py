@@ -437,18 +437,11 @@ class BinaryCriteoUtils:
                 batch.sparse_features._values
                 tensor([6., 6., 6., 8., 8., 8., 7., 7., 7., 6., 6., 6., 5., 5., 5.],
                     device='cuda:0')
-                """              
-            if mysettings.NEW_DATASET == False and (SETTING == 4 or SETTING == 5):
-                data = np.fromfile(fin, dtype=dtype, count=num_entries)
-                if '_cat' in fname:
-                    data = data.astype(np.int64)
-                elif dtype == np.float64:
-                    data = data.astype(np.float32)
-                if '_int' in fname:
-                    data = np.log(data + 1)
-            elif mysettings.NEW_DATASET and (SETTING == 4 or SETTING == 5):
-                data = np.fromfile(fin, dtype=dtype, count=num_entries)
-                                
+                """     
+            if SETTING == 4 or SETTING == 5: 
+                data = np.load(fname, mmap_mode='r')
+                data = data[start_row:start_row+num_rows]
+                                                        
             return data.reshape((num_rows, row_size))
 
 
@@ -810,10 +803,10 @@ class InMemoryBinaryCriteoIterDataPipe(IterableDataset):
                     )
                 )
 
-        if self.hashes is not None:
-            hashes_np = np.array(self.hashes).reshape((1, CAT_FEATURE_COUNT))
-            for sparse_arr in self.sparse_arrs:
-                sparse_arr %= hashes_np
+        # if self.hashes is not None:
+        #     hashes_np = np.array(self.hashes).reshape((1, CAT_FEATURE_COUNT))
+        #     for sparse_arr in self.sparse_arrs:
+        #         sparse_arr %= hashes_np
 
     def _np_arrays_to_batch(
         self, dense: np.ndarray, sparse: np.ndarray, labels: np.ndarray
@@ -875,11 +868,25 @@ class InMemoryBinaryCriteoIterDataPipe(IterableDataset):
                 slice_ = slice(row_idx, row_idx + rows_to_get)
                 #if SETTING == 3:
                 #    slice_ = slice(0, BATCH_SIZE)
+                dense_inputs = self.dense_arrs[file_idx][slice_, :]
+                sparse_inputs = self.sparse_arrs[file_idx][slice_, :]
+                target_labels = self.labels_arrs[file_idx][slice_, :]
+
+                if mysettings.NEW_DATASET == False and (SETTING == 4 or SETTING == 5):
+                    dense_inputs = np.log(dense_inputs + 1).astype(np.float32)
+                    sparse_inputs = sparse_inputs.astype(np.int64)                
+
+                mmap_mode = True
+                if mmap_mode and self.hashes is not None:
+                    sparse_inputs = sparse_inputs % np.array(self.hashes).reshape(
+                        (1, CAT_FEATURE_COUNT)
+                    )
+
                 append_to_buffer(
-                    self.dense_arrs[file_idx][slice_, :],
-                    self.sparse_arrs[file_idx][slice_, :],
-                    self.labels_arrs[file_idx][slice_, :],
-                )
+                    dense_inputs,
+                    sparse_inputs,
+                    target_labels,
+                )              
                 row_idx += rows_to_get
 
                 if row_idx >= self.num_rows_per_file[file_idx]:
