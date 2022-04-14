@@ -391,7 +391,7 @@ class BinaryCriteoUtils:
                 raise ValueError("Cannot load range for npy with ndim == 2.")
 
             if False:
-                if not (0 <= start_row < total_rows): #total_rows == 195841983 
+                if not (0 <= start_row < total_rows): #total_rows == 195841983
                    raise ValueError(
                         f"start_row ({start_row}) is out of bounds. It must be between 0 "
                         f"and {total_rows - 1}, inclusive."
@@ -431,17 +431,17 @@ class BinaryCriteoUtils:
                     r = np.trunc(r).astype(np.int32)
                     data = np.concatenate([r for _ in range(100)], axis=0)
                 else:
-                    data = np.ones((fake_file_num_entries,1)).astype(np.float32)          
+                    data = np.ones((fake_file_num_entries,1)).astype(np.float32)
                 num_rows, row_size = data.shape[0], data.shape[1]
                 """
                 batch.sparse_features._values
                 tensor([6., 6., 6., 8., 8., 8., 7., 7., 7., 6., 6., 6., 5., 5., 5.],
                     device='cuda:0')
-                """     
-            if SETTING == 4 or SETTING == 5: 
+                """
+            if SETTING == 4 or SETTING == 5:
                 data = np.load(fname, mmap_mode='r')
                 data = data[start_row:start_row+num_rows]
-                                                        
+
             return data.reshape((num_rows, row_size))
 
 
@@ -868,13 +868,36 @@ class InMemoryBinaryCriteoIterDataPipe(IterableDataset):
                 slice_ = slice(row_idx, row_idx + rows_to_get)
                 #if SETTING == 3:
                 #    slice_ = slice(0, BATCH_SIZE)
-                dense_inputs = self.dense_arrs[file_idx][slice_, :]
-                sparse_inputs = self.sparse_arrs[file_idx][slice_, :]
-                target_labels = self.labels_arrs[file_idx][slice_, :]
+                dense_inputs = self.dense_arrs[file_idx][slice_, :] #float 32 when using shabab dataset
+                sparse_inputs = self.sparse_arrs[file_idx][slice_, :] #int32 when using shabab dataset
+                target_labels = self.labels_arrs[file_idx][slice_, :] #int32 when using shabab dataset
+                # Above 3 are all float64 when using sample0 dataset.
+
+                if mysettings.NEW_DATASET and (SETTING == 4 or SETTING == 5):
+
+                    #m = dense_inputs
+                    #m = np.exp(m, out=np.zeros_like(m), where=(m!=0))
+                    #m = m[np.where(m != 0)] - 2
+                    #dense_inputs = np.log(m, out=np.zeros_like(m), where=(m!=0))
+
+                    dense_inputs = np.log(np.exp(dense_inputs)-2, out=np.zeros_like(dense_inputs), where=(dense_inputs>1))
+                    sparse_inputs = sparse_inputs.astype(np.int64)
+                    target_labels = target_labels.astype(np.float64)
+                #   dense_inputs = np.log(np.exp(dense_inputs)-2)
 
                 if mysettings.NEW_DATASET == False and (SETTING == 4 or SETTING == 5):
                     dense_inputs = np.log(dense_inputs + 1).astype(np.float32)
-                    sparse_inputs = sparse_inputs.astype(np.int64)                
+                    sparse_inputs = sparse_inputs.astype(np.int64)
+
+                #dense_inputs = dense_inputs.astype(np.float32)
+                #sparse_inputs = sparse_inputs.astype(np.int64)
+                #target_labels = target_labels.astype(np.float32)
+
+                #dense_inputs = dense_inputs.astype(np.float64)
+                #sparse_inputs = sparse_inputs.astype(np.int64)
+                #target_labels = target_labels.astype(np.int64)
+
+
 
                 mmap_mode = True
                 if mmap_mode and self.hashes is not None:
@@ -886,7 +909,7 @@ class InMemoryBinaryCriteoIterDataPipe(IterableDataset):
                     dense_inputs,
                     sparse_inputs,
                     target_labels,
-                )              
+                )
                 row_idx += rows_to_get
 
                 if row_idx >= self.num_rows_per_file[file_idx]:

@@ -87,22 +87,22 @@ class TestEBCSharder(EmbeddingBagCollectionSharder):
                 #ShardingType.ROW_WISE.value,
                 #ShardingType.TABLE_ROW_WISE.value,
                 #ShardingType.TABLE_COLUMN_WISE.value,
-                ]  
+                ]
             self._kernel_type = [
-                #EmbeddingComputeKernel.DENSE.value, 
-                EmbeddingComputeKernel.SPARSE.value,
+                #EmbeddingComputeKernel.DENSE.value,
+                #EmbeddingComputeKernel.SPARSE.value,
                 #EmbeddingComputeKernel.BATCHED_DENSE.value,
                 #EmbeddingComputeKernel.BATCHED_FUSED.value,
                 #EmbeddingComputeKernel.BATCHED_FUSED_UVM.value,
-                #EmbeddingComputeKernel.BATCHED_FUSED_UVM_CACHING.value,
-                #EmbeddingComputeKernel.BATCHED_QUANT.value,    
+                EmbeddingComputeKernel.BATCHED_FUSED_UVM_CACHING.value,
+                #EmbeddingComputeKernel.BATCHED_QUANT.value,
             ]
     """
     Restricts sharding to single type only.
     """
 
     def sharding_types(self, compute_device_type: str) -> List[str]:
-        return self._sharding_type     
+        return self._sharding_type
 
     """
     Restricts to single impl.
@@ -115,7 +115,7 @@ class TestEBCSharder(EmbeddingBagCollectionSharder):
 
     @property
     def fused_params(self) -> Optional[Dict[str, Any]]:
-        return self._fused_params       
+        return self._fused_params
 
 def parse_args(argv: List[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="torchrec dlrm example trainer")
@@ -291,10 +291,10 @@ def _evaluate(
             _loss, logits, labels = train_pipeline.progress(combined_iterator)
             labels = labels.int()
             #auroc(logits, labels)
-            #accuracy(logits, labels)             
+            #accuracy(logits, labels)
             nn_output = torch.nn.functional.sigmoid(logits)
             auroc(nn_output, labels)
-            accuracy(nn_output, labels)      
+            accuracy(nn_output, labels)
         except StopIteration:
             break
     auroc_result = auroc.compute().item()
@@ -302,6 +302,7 @@ def _evaluate(
     if dist.get_rank() == 0:
         print(f"AUROC over {stage} set: {auroc_result}.")
         print(f"Accuracy over {stage} set: {accuracy_result}.")
+    model.train(True)
 
 
 def _train(
@@ -357,6 +358,7 @@ def _train(
             train_pipeline.progress(combined_iterator)
             if (
                 args.validation_freq_within_epoch
+                and it > 0
                 and it % args.validation_freq_within_epoch == 0
             ):
                 _evaluate(
@@ -528,7 +530,7 @@ def main(argv: List[str]) -> None:
         for collectionkey, plans in model._plan.plan.items():
             print(collectionkey)
             for key, plan in plans.items():
-                print(key, "\n", plan, "\n")    
+                print(key, "\n", plan, "\n")
 
     train_pipeline = TrainPipelineSparseDist(
         model,
