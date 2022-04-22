@@ -756,6 +756,9 @@ class InMemoryBinaryCriteoIterDataPipe(IterableDataset):
         self.num_rows_per_file: List[int] = [a.shape[0] for a in self.dense_arrs]
         self.num_batches: int = sum(self.num_rows_per_file) // batch_size
 
+        self.cumsum_rows_per_file = np.cumsum([0] + self.num_rows_per_file)
+        self.total_rows: int = sum(self.num_rows_per_file)
+
         # These values are the same for the KeyedJaggedTensors in all batches, so they
         # are computed once here. This avoids extra work from the KeyedJaggedTensor sync
         # functions.
@@ -861,29 +864,41 @@ class InMemoryBinaryCriteoIterDataPipe(IterableDataset):
                 batch_idx += 1
                 buffer = None
             else:
-                rows_to_get = min(
-                    self.batch_size - buffer_row_count,
-                    self.num_rows_per_file[file_idx] - row_idx,
-                )
-                slice_ = slice(row_idx, row_idx + rows_to_get)
-                #if SETTING == 3:
-                #    slice_ = slice(0, BATCH_SIZE)
-                dense_inputs = self.dense_arrs[file_idx][slice_, :] #float 32 when using shabab dataset
-                sparse_inputs = self.sparse_arrs[file_idx][slice_, :] #int32 when using shabab dataset
-                target_labels = self.labels_arrs[file_idx][slice_, :] #int32 when using shabab dataset
-                # Above 3 are all float64 when using sample0 dataset.
+                if len(self.dense_arrs) > 1:
+                    dense_inputs = []
+                    sparse_inputs = []
+                    target_labels = []
+                    for _ in range(self.batch_size):
+                        gid = np.random.randint(0, self.total_rows)
+                        day = np.digitize(gid, self.cumsum_rows_per_file) - 1
+                        lid = gid - self.cumsum_rows_per_file[day]
+                        dense_inputs.append(self.dense_arrs[day][lid, :])
+                        sparse_inputs.append(self.sparse_arrs[day][lid, :])
+                        target_labels.append(self.labels_arrs[day][lid, :])
+                    dense_inputs = np.concatenate(dense_inputs)
+                    sparse_inputs = np.concatenate(sparse_inputs)
+                    target_labels =  np.concatenate(target_labels)
+                    rows_to_get = 0
+                else:
+                    rows_to_get = min(
+                        self.batch_size - buffer_row_count,
+                        self.num_rows_per_file[file_idx] - row_idx,
+                    )
+                    slice_ = slice(row_idx, row_idx + rows_to_get)
+                    #if SETTING == 3:
+                    #    slice_ = slice(0, BATCH_SIZE)
+                    dense_inputs = self.dense_arrs[file_idx][slice_, :] #float 32 when using shabab dataset
+                    sparse_inputs = self.sparse_arrs[file_idx][slice_, :] #int32 when using shabab dataset
+                    target_labels = self.labels_arrs[file_idx][slice_, :] #int32 when using shabab dataset
+                    # Above 3 are all float64 when using sample0 dataset.
 
                 if mysettings.NEW_DATASET and (SETTING == 4 or SETTING == 5):
-
-                    #m = dense_inputs
-                    #m = np.exp(m, out=np.zeros_like(m), where=(m!=0))
-                    #m = m[np.where(m != 0)] - 2
-                    #dense_inputs = np.log(m, out=np.zeros_like(m), where=(m!=0))
-
-                    dense_inputs = np.log(np.exp(dense_inputs)-2, out=np.zeros_like(dense_inputs), where=(dense_inputs>1))
-                    sparse_inputs = sparse_inputs.astype(np.int64)
-                    target_labels = target_labels.astype(np.float64)
-                #   dense_inputs = np.log(np.exp(dense_inputs)-2)
+                    d = dense_inputs.astype(np.float64)
+                    d = np.exp(dense_inputs)-2
+                    d = np.log(d, out=np.zeros_like(d), where=(d>1), dtype=np.float64)
+                    dense_inputs = dense_inputs.astype(np.float32)
+                    sparse_inputs = sparse_inputs.astype(np.longlong)
+                    target_labels = target_labels.astype(np.longlong)
 
                 if mysettings.NEW_DATASET == False and (SETTING == 4 or SETTING == 5):
                     dense_inputs = np.log(dense_inputs + 1).astype(np.float32)
