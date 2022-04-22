@@ -756,8 +756,8 @@ class InMemoryBinaryCriteoIterDataPipe(IterableDataset):
         self.num_rows_per_file: List[int] = [a.shape[0] for a in self.dense_arrs]
         self.num_batches: int = sum(self.num_rows_per_file) // batch_size
 
-        self.cumsum_rows_per_file = np.cumsum([0] + self.num_rows_per_file)
         self.total_rows: int = sum(self.num_rows_per_file)
+
 
         # These values are the same for the KeyedJaggedTensors in all batches, so they
         # are computed once here. This avoids extra work from the KeyedJaggedTensor sync
@@ -854,9 +854,20 @@ class InMemoryBinaryCriteoIterDataPipe(IterableDataset):
         # Maintain a buffer that can contain up to batch_size rows. Fill buffer as
         # much as possible on each iteration. Only return a new batch when batch_size
         # rows are filled.
+        self.cumsum_rows_per_file = np.cumsum([0] + self.num_rows_per_file)
+        self.sub_batch_size: int = 4
+        self.sub_batches_count: int = self.batch_size // self.sub_batch_size
+        np.random.seed(self.rank*100)
+        #self.reshuffled_ordering = np.random.permutation(self.total_rows // self.sub_batch_size)
+
+        self.reshuffled_ordering = np.concatenate([ np.random.permutation(rows//self.sub_batch_size) for rows in np.self.num_rows_per_file])
+
+
+        sub_batch = self.batch_size // self.sub_batches_count
         file_idx = 0
         row_idx = 0
         batch_idx = 0
+        last_day = len(self.dense_arrs) - 1
         while batch_idx < self.num_batches:
             buffer_row_count = 0 if buffer is None else none_throws(buffer)[0].shape[0]
             if buffer_row_count == self.batch_size:
@@ -868,13 +879,24 @@ class InMemoryBinaryCriteoIterDataPipe(IterableDataset):
                     dense_inputs = []
                     sparse_inputs = []
                     target_labels = []
-                    for _ in range(self.batch_size):
-                        gid = np.random.randint(0, self.total_rows)
+                    for i in range(self.sub_batches_count):
+
+                        id = batch_idx*self.sub_batches_count + i
+                        gid = self.reshuffled_ordering[id] * self.sub_batch_size
                         day = np.digitize(gid, self.cumsum_rows_per_file) - 1
                         lid = gid - self.cumsum_rows_per_file[day]
-                        dense_inputs.append(self.dense_arrs[day][lid, :])
-                        sparse_inputs.append(self.sparse_arrs[day][lid, :])
-                        target_labels.append(self.labels_arrs[day][lid, :])
+
+                        slice_1 = slice(lid, min(lid + sub_batch, self.num_rows_per_file[day]))
+                        slice_2 = slice(0, max(0, lid + sub_batch - self.num_rows_per_file[day]))
+
+                        day2 = min(day+1,last_day)
+                        dense_inputs.append(self.dense_arrs[day][slice_1, :])
+                        sparse_inputs.append(self.sparse_arrs[day][slice_1, :])
+                        target_labels.append(self.labels_arrs[day][slice_1, :])
+                        if slice_2.stop > 0:
+                            dense_inputs[-1] = np.concatenate((dense_inputs[-1], self.dense_arrs[day2][slice_2, :]))
+                            sparse_inputs[-1] = np.concatenate((sparse_inputs[-1], self.sparse_arrs[day2][slice_2, :]))
+                            target_labels[-1] = np.concatenate((target_labels[-1], self.labels_arrs[day2][slice_2, :]))
                     dense_inputs = np.concatenate(dense_inputs)
                     sparse_inputs = np.concatenate(sparse_inputs)
                     target_labels =  np.concatenate(target_labels)
@@ -911,8 +933,6 @@ class InMemoryBinaryCriteoIterDataPipe(IterableDataset):
                 #dense_inputs = dense_inputs.astype(np.float64)
                 #sparse_inputs = sparse_inputs.astype(np.int64)
                 #target_labels = target_labels.astype(np.int64)
-
-
 
                 mmap_mode = True
                 if mmap_mode and self.hashes is not None:
