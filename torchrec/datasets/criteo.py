@@ -854,9 +854,9 @@ class InMemoryBinaryCriteoIterDataPipe(IterableDataset):
         # Maintain a buffer that can contain up to batch_size rows. Fill buffer as
         # much as possible on each iteration. Only return a new batch when batch_size
         # rows are filled.
-        self.cumsum_rows_per_file = np.cumsum([0] + self.num_rows_per_file)
         self.sub_batch_size: int = 4
         self.sub_batches_count: int = self.batch_size // self.sub_batch_size
+        self.cumsum_rows_per_file = np.cumsum([0] + self.num_rows_per_file)
         np.random.seed(self.rank*100)
         #self.reshuffled_ordering = np.random.permutation(self.total_rows // self.sub_batch_size)
 
