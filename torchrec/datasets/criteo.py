@@ -74,6 +74,158 @@ def _default_row_mapper(example: List[str]) -> Dict[str, Union[int, str]]:
     }
 
 
+
+
+
+# custom_dist --> prob array
+# Custom distribution provided over a small linear subset of [0, 1] corresponding to the normalized distances between
+# the given index value and rest of values (max distance is mapped to 1) is transformed into a distribution over
+# all possible actual distances using interpolation.
+def transform_custom(custom_dist, t):
+
+    n = len(custom_dist)
+    domain = np.linspace(0.0, 1.0, num=n)
+    prob = np.zeros(t)
+    center = int(t / 2)
+    loc = 0
+    dist = domain[loc + 1] - domain[loc]
+    maxdist = center
+    for i in range(center + 1):
+        if i / maxdist > domain[loc + 1]:
+            loc += 1
+            dist = domain[loc + 1] - domain[loc]
+        s = (i/maxdist - domain[loc]) / dist
+        prob[center + i] = (1 - s) * custom_dist[loc] + s * custom_dist[loc + 1]
+        prob[center - i] =  prob[center + i]
+
+    return prob
+
+# Creates multi-index for given distribution. In the case index value is close to the boundary, i.e.
+# close to 0 or T, where [0, T] is a range of index values we apply rejection sampling method:
+# points are sampled and negative or >= T values are discarded, we stop when we get the desired number of valid
+# values.
+# Rejection sampling method passes permutation test. It produces samples from the same distribution as
+# samples produced around far-from-boundary points. For example, let the index range be [0, 100], then for point "10"
+# we get a sample S1. We now produce standard sample at the reference point "50" but restrict it to interval [40, 100],
+# call it S2. Samples S1 + 40 (shifted so that distribution supports coincide) and S2 come from the same distribution
+# over [40, 100].
+
+import torch.distributions as tdist
+import sys
+def make_new_indices(datacounts, index_dist, custom_dist, M):
+
+    fc = len(datacounts)
+    i2mapped = [{} for _ in range(fc)]  # use this dict to transform lS_i, lS_o: index --> [i1, i2, ...]
+
+    # th is the minimum index range to which multi-index construction is applied
+    # A is size of large pool of numbers sampled from distribution, it's pre-chosen
+    # periodically since calls to np.random.choice() are slow
+    th = 200
+    A = 1000000
+
+    for j in range(fc):
+        if datacounts[j] >= th and datacounts[j] < M:
+            sys.exit(
+                "ERROR: The number of values in multi-index exceeds index range"
+            )
+
+    for j in range(fc):
+
+        T = datacounts[j]
+        if T < th:
+            for i in range(T):
+                i2mapped[j][i] = [i]
+            continue
+        t2 = int(T / 2)
+        if T % 2 == 1:
+            x0 = torch.arange(-t2, t2 + 1)
+        else:
+            x0 = torch.arange(-t2 + 1, t2)
+        xU, xL = x0 + 0.5, x0 - 0.5
+        if len(custom_dist) == 0:
+            if index_dist == "normal":
+                std = 0.1
+                stdj = std * T
+                nd = tdist.Normal(torch.tensor([0.0]), torch.tensor([stdj]))
+                prob = nd.cdf(xU) - nd.cdf(xL)
+            elif index_dist == "uniform":
+                ud = tdist.Uniform(torch.tensor([-t2-1]), torch.tensor([t2+1]))
+                prob = ud.cdf(xU) - ud.cdf(xL)
+        else:
+            prob = transform_custom(custom_dist, len(x0))
+        if not isinstance(prob, np.ndarray):
+            prob = prob.cpu().numpy()
+        prob[prob < 0] = 0
+        prob = prob / np.sum(prob)          # normalize the probabilities so their sum is 1
+        general = np.random.choice(x0, size = A, p = prob, replace=True)
+
+        k = 0
+        for i in range(T):
+            indset = general[k : k + M]
+            t = 2
+            indset = np.unique(indset)
+            indset = indset[np.logical_and(indset >= -i, indset < T - i)]
+            while len(indset) < M:
+                if k + t * M > A:
+                    k = k % A
+                    t = 2
+                    general = np.random.choice(x0, size = A, p = prob, replace=True)
+                    indset2 = general[k : k + M]
+                    indset = np.concatenate((indset, indset2), axis=0)
+                    indset = np.unique(indset)
+                    indset = indset[np.logical_and(indset >= -i, indset < T - i)]
+                else:
+                    indset2 = general[k : k + t * M]
+                    indset = np.concatenate((indset, indset2), axis=0)
+                    indset = np.unique(indset)
+                    indset = indset[np.logical_and(indset >= -i, indset < T - i)]
+                    t += 1
+
+            indset = indset[:M] + i    # always inside [0,T)
+            k += M
+            if k >= A:
+                k = k % A
+                general = np.random.choice(x0, size = A, p = prob, replace=True)
+            i2mapped[j][i] = indset
+            # if i % 50000 == 0:
+            #     print(j, i, i2mapped[j][i])
+
+    return i2mapped
+
+
+def make_new_batch(lS_o, lS_i, i2mapped):
+
+    cf = len(lS_o)
+    lS_o_new = [ [None] for _ in range(cf)]
+    lS_i_new = [ [None] for _ in range(cf)]
+
+    for cat_fea in range(cf):
+        bb = lS_o[cat_fea].shape[0]
+        # print(cat_fea, bb, lS_i[cat_fea].shape[0])
+        lS_o_new[cat_fea] = torch.empty(size=(bb,),dtype=torch.long)
+        lS_i_new[cat_fea] = torch.empty(size=(0,),dtype=torch.long)
+
+        b_ind = lS_i[cat_fea].tolist()
+        M = 1
+        for ind in b_ind:
+            indset = torch.tensor(i2mapped[cat_fea][ind], dtype=torch.long)
+            if M == 1:
+                M = indset.shape[0]
+            lS_i_new[cat_fea] = torch.cat((lS_i_new[cat_fea], indset), dim=0)
+
+        for j in range(bb):
+            lS_o_new[cat_fea][j] = lS_o[cat_fea][j] * M
+
+    return lS_o_new, lS_i_new
+
+
+
+
+
+
+
+
+
 class CriteoIterDataPipe(IterDataPipe):
     """
     IterDataPipe that can be used to stream either the Criteo 1TB Click Logs Dataset
@@ -818,14 +970,32 @@ class InMemoryBinaryCriteoIterDataPipe(IterableDataset):
             sparse = sparse[shuffler]
             labels = labels[shuffler]
 
+        ##################################################
+        ##################################################
+        # INSERT MULTI-HOT CODE HERE. CREATE OFFSETS ARRAY
+        ##################################################
+        ##################################################
+        ##################################################
+        ##################################################
+        ##################################################
+
+        index_split_num = 20
+        index_dist = "normal"
+        custom_dist = []
+        i2mapped = make_new_indices(mysettings.LN_EMB, index_dist, custom_dist, index_split_num)
+
+        lS_o = self.offsets
+        lS_i = torch.from_numpy(sparse.transpose(1, 0).reshape(-1))
+        lS_o, lS_i = make_new_batch(lS_o, lS_i, i2mapped)
+
         return Batch(
             dense_features=torch.from_numpy(dense),
             sparse_features=KeyedJaggedTensor(
                 keys=self.keys,
                 # transpose + reshape(-1) incurs an additional copy.
-                values=torch.from_numpy(sparse.transpose(1, 0).reshape(-1)),
-                lengths=self.lengths,
-                offsets=self.offsets,
+                values=lS_i,
+                lengths=lS_o[1:] - lS_o[:-1], #self.lengths,
+                offsets=lS_o,
                 stride=self.stride,
                 length_per_key=self.length_per_key,
                 offset_per_key=self.offset_per_key,
