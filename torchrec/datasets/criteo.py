@@ -29,6 +29,7 @@ from torchrec.mysettings import (
     LOG_FILE,
     BATCH_SIZE,
     LN_EMB,
+    POWER_NUM,
 )
 
 import numpy as np
@@ -112,10 +113,17 @@ def transform_custom(custom_dist, t):
 
 import torch.distributions as tdist
 import sys
-def make_new_indices(datacounts, index_dist, custom_dist, M):
-
+import functools
+#def make_new_indices(datacounts, index_dist, custom_dist, M):
+index_split_num = 1
+if False:
+    index_split_num = 1
+    index_dist = "normal"
+    custom_dist = []
+    datacounts = mysettings.LN_EMB
+    M = index_split_num
     fc = len(datacounts)
-    i2mapped = [{} for _ in range(fc)]  # use this dict to transform lS_i, lS_o: index --> [i1, i2, ...]
+    i2mapped_global = [{} for _ in range(fc)]  # use this dict to transform lS_i, lS_o: index --> [i1, i2, ...]
 
     # th is the minimum index range to which multi-index construction is applied
     # A is size of large pool of numbers sampled from distribution, it's pre-chosen
@@ -134,7 +142,7 @@ def make_new_indices(datacounts, index_dist, custom_dist, M):
         T = datacounts[j]
         if T < th:
             for i in range(T):
-                i2mapped[j][i] = [i]
+                i2mapped_global[j][i] = [i]
             continue
         t2 = int(T / 2)
         if T % 2 == 1:
@@ -186,37 +194,35 @@ def make_new_indices(datacounts, index_dist, custom_dist, M):
             if k >= A:
                 k = k % A
                 general = np.random.choice(x0, size = A, p = prob, replace=True)
-            i2mapped[j][i] = indset
+            i2mapped_global[j][i] = indset
             # if i % 50000 == 0:
             #     print(j, i, i2mapped[j][i])
 
-    return i2mapped
+    #return i2mapped
 
 
-def make_new_batch(lS_o, lS_i, i2mapped):
+def make_new_batch(lS_i, i2mapped):
 
-    cf = len(lS_o)
-    lS_o_new = [ [None] for _ in range(cf)]
+    cf = CAT_FEATURE_COUNT #len(lS_o)
+    #lS_o_new = [ [None] for _ in range(cf)]
     lS_i_new = [ [None] for _ in range(cf)]
 
     for cat_fea in range(cf):
-        bb = lS_o[cat_fea].shape[0]
+        bb = BATCH_SIZE #lS_o[cat_fea].shape[0]  # check this in dlrm_s_pytorch.py to see what bb is there.
         # print(cat_fea, bb, lS_i[cat_fea].shape[0])
-        lS_o_new[cat_fea] = torch.empty(size=(bb,),dtype=torch.long)
-        lS_i_new[cat_fea] = torch.empty(size=(0,),dtype=torch.long)
-
+        #lS_o_new[cat_fea] = torch.empty(size=(bb,),dtype=torch.long)
+        lS_i_new[cat_fea] = torch.empty(size=(bb*index_split_num,),dtype=torch.long)
+        #lS_i_new[cat_fea] = torch.empty(size=(0,),dtype=torch.long)
         b_ind = lS_i[cat_fea].tolist()
         M = 1
-        for ind in b_ind:
+        for k, ind in enumerate(b_ind):
             indset = torch.tensor(i2mapped[cat_fea][ind], dtype=torch.long)
-            if M == 1:
-                M = indset.shape[0]
-            lS_i_new[cat_fea] = torch.cat((lS_i_new[cat_fea], indset), dim=0)
+            lS_i_new[cat_fea][k*index_split_num : (k+1)*index_split_num] = indset[:]
+            #if M == 1:
+            #    M = indset.shape[0]
+            #lS_i_new[cat_fea] = torch.cat((lS_i_new[cat_fea], indset), dim=0)
 
-        for j in range(bb):
-            lS_o_new[cat_fea][j] = lS_o[cat_fea][j] * M
-
-    return lS_o_new, lS_i_new
+    return lS_i_new
 
 
 
@@ -908,6 +914,14 @@ class InMemoryBinaryCriteoIterDataPipe(IterableDataset):
         self.num_rows_per_file: List[int] = [a.shape[0] for a in self.dense_arrs]
         self.num_batches: int = sum(self.num_rows_per_file) // batch_size
 
+        ############################################################################
+        # Multi-hot code
+        #index_split_num = 20
+        #index_dist = "normal"
+        #custom_dist = []
+        #self.i2mapped = make_new_indices(mysettings.LN_EMB, index_dist, custom_dist, index_split_num)
+        ############################################################################
+
         # These values are the same for the KeyedJaggedTensors in all batches, so they
         # are computed once here. This avoids extra work from the KeyedJaggedTensor sync
         # functions.
@@ -963,12 +977,12 @@ class InMemoryBinaryCriteoIterDataPipe(IterableDataset):
     def _np_arrays_to_batch(
         self, dense: np.ndarray, sparse: np.ndarray, labels: np.ndarray
     ) -> Batch:
-        if self.shuffle_batches:
-            # Shuffle all 3 in unison
-            shuffler = np.random.permutation(len(dense))
-            dense = dense[shuffler]
-            sparse = sparse[shuffler]
-            labels = labels[shuffler]
+        #if self.shuffle_batches:
+        #    # Shuffle all 3 in unison
+        #    shuffler = np.random.permutation(len(dense))
+        #    dense = dense[shuffler]
+        #    sparse = sparse[shuffler]
+        #    labels = labels[shuffler]
 
         ##################################################
         ##################################################
@@ -979,28 +993,39 @@ class InMemoryBinaryCriteoIterDataPipe(IterableDataset):
         ##################################################
         ##################################################
 
-        index_split_num = 20
-        index_dist = "normal"
-        custom_dist = []
-        i2mapped = make_new_indices(mysettings.LN_EMB, index_dist, custom_dist, index_split_num)
+        for i in range(len(sparse[0])):
+            if mysettings.LN_EMB_RESCALED[i] == 1:
+                sparse[:,i] = np.ceil(sparse[:,i]**POWER_NUM)
 
-        lS_o = self.offsets
-        lS_i = torch.from_numpy(sparse.transpose(1, 0).reshape(-1))
-        lS_o, lS_i = make_new_batch(lS_o, lS_i, i2mapped)
+        lS_o = self.offsets.contiguous()
+        lS_i = sparse.transpose(1, 0)
+        if False:
+            lS_i = make_new_batch(lS_i, i2mapped_global)
+
+            # for cat_fea in range(CAT_FEATURE_COUNT):
+            #     for j in range(BATCH_SIZE):
+            #         lS_o[cat_fea][j] = lS_o[cat_fea][j] * index_split_num
+
+            lS_i = torch.cat(lS_i)
+        lS_i = torch.from_numpy(lS_i)
+        lS_i = lS_i.reshape(-1).contiguous()
+
+        sparse_features=KeyedJaggedTensor.from_offsets_sync(
+                        keys=self.keys,
+                        # transpose + reshape(-1) incurs an additional copy.
+                        values=lS_i.contiguous(),
+                        #lengths=lS_o[1:] - lS_o[:-1], #self.lengths,
+                        #lengths=self.lengths*index_split_num,
+                        offsets=lS_o*index_split_num,
+                        #stride=self.stride,
+                        #length_per_key=self.length_per_key*index_split_num,
+                        #offset_per_key=self.offset_per_key*index_split_num,
+                        #index_per_key=self.index_per_key,
+                    )
 
         return Batch(
             dense_features=torch.from_numpy(dense),
-            sparse_features=KeyedJaggedTensor(
-                keys=self.keys,
-                # transpose + reshape(-1) incurs an additional copy.
-                values=lS_i,
-                lengths=lS_o[1:] - lS_o[:-1], #self.lengths,
-                offsets=lS_o,
-                stride=self.stride,
-                length_per_key=self.length_per_key,
-                offset_per_key=self.offset_per_key,
-                index_per_key=self.index_per_key,
-            ),
+            sparse_features=sparse_features,
             labels=torch.from_numpy(labels.reshape(-1)),
         )
 

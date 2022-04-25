@@ -495,7 +495,7 @@ def main(argv: List[str]) -> None:
         "learning_rate": args.learning_rate,
     }
 
-    if True:
+    if False:
         sharders = TestEBCSharder(
                         fused_params=fused_params,
                     )
