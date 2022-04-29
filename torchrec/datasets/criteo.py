@@ -206,14 +206,14 @@ if True:
 def make_new_batch(lS_i, i2mapped):
 
     cf = CAT_FEATURE_COUNT #len(lS_o)
-    multi_hot_i_l = []
-    for cat_fea in range(cf):
-        multi_hot_i = torch.nn.functional.embedding(lS_i[cat_fea], i2mapped[cat_fea])
-        multi_hot_i = multi_hot_i.transpose(0,1).reshape(-1).long()
-        multi_hot_i_l.append(multi_hot_i)
-    return multi_hot_i_l
-    lS_i_new = torch.cat(out)
-    if False:
+    if 1 < index_split_num:
+        multi_hot_i_l = []
+        for cat_fea in range(cf):
+            multi_hot_i = torch.nn.functional.embedding(lS_i[cat_fea], i2mapped[cat_fea])
+            multi_hot_i = multi_hot_i.transpose(0,1).reshape(-1).long()
+            multi_hot_i_l.append(multi_hot_i)
+        return multi_hot_i_l
+    else:
         #lS_o_new = [ [None] for _ in range(cf)]
         lS_i_new = [ [None] for _ in range(cf)]
 
@@ -231,7 +231,7 @@ def make_new_batch(lS_i, i2mapped):
                 #if M == 1:
                 #    M = indset.shape[0]
                 #lS_i_new[cat_fea] = torch.cat((lS_i_new[cat_fea], indset), dim=0)
-    return lS_i_new
+        return lS_i_new
 
 
 
