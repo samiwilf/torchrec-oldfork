@@ -27,6 +27,8 @@ from torchrec.modules.embedding_configs import EmbeddingBagConfig
 from torchrec.optim.keyed import CombinedOptimizer, KeyedOptimizerWrapper
 from tqdm import tqdm
 
+from torch.utils.tensorboard import SummaryWriter
+
 from torchrec.mysettings import (
     ARGV,
     INT_FEATURE_COUNT,
@@ -312,6 +314,7 @@ def _train(
     next_iterator: Iterator[Batch],
     within_epoch_val_dataloader: DataLoader,
     epoch: int,
+    writer,
 ) -> None:
     """
     Train model for 1 epoch. Helper function for train_val_test.
@@ -355,7 +358,8 @@ def _train(
     it = 0
     for _ in tqdm(iter(int, 1), desc=f"Epoch {epoch}"):
         try:
-            train_pipeline.progress(combined_iterator)
+            _loss, logits, labels = train_pipeline.progress(combined_iterator)
+            # writer.add_scalar("Train/Loss", _loss, it)
             if (
                 args.validation_freq_within_epoch
                 and it > 0
@@ -398,12 +402,13 @@ def train_val_test(
     Returns:
         None.
     """
+    writer = SummaryWriter("tensorboard_profile")
     train_iterator = iter(train_dataloader)
     test_iterator = iter(test_dataloader)
     for epoch in range(args.epochs):
         val_iterator = iter(val_dataloader)
         _train(
-            args, train_pipeline, train_iterator, val_iterator, val_dataloader, epoch
+            args, train_pipeline, train_iterator, val_iterator, val_dataloader, epoch, writer
         )
         train_iterator = iter(train_dataloader)
         val_next_iterator = (
@@ -495,7 +500,7 @@ def main(argv: List[str]) -> None:
         "learning_rate": args.learning_rate,
     }
 
-    if False:
+    if True:
         sharders = TestEBCSharder(
                         fused_params=fused_params,
                     )

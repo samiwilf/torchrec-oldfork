@@ -115,9 +115,8 @@ import torch.distributions as tdist
 import sys
 import functools
 #def make_new_indices(datacounts, index_dist, custom_dist, M):
-index_split_num = 10
-if True:
-    index_split_num = 1
+index_split_num = 1
+if 1 < index_split_num:
     index_dist = "normal"
     custom_dist = []
     datacounts = mysettings.LN_EMB
@@ -1009,7 +1008,7 @@ class InMemoryBinaryCriteoIterDataPipe(IterableDataset):
         lS_o = self.offsets.contiguous()
         lS_i = sparse.transpose(1, 0)
         lS_i = torch.from_numpy(lS_i)
-        if True:
+        if 1 < index_split_num:
             lS_i = make_new_batch(lS_i, i2mapped_global)
 
             # for cat_fea in range(CAT_FEATURE_COUNT):
@@ -1078,15 +1077,15 @@ class InMemoryBinaryCriteoIterDataPipe(IterableDataset):
                 # Above 3 are all float64 when using sample0 dataset.
 
                 if mysettings.NEW_DATASET and (SETTING == 4 or SETTING == 5):
-                    pass
+                    #pass
                     #m = dense_inputs
                     #m = np.exp(m, out=np.zeros_like(m), where=(m!=0))
                     #m = m[np.where(m != 0)] - 2
                     #dense_inputs = np.log(m, out=np.zeros_like(m), where=(m!=0))
 
-                    # dense_inputs = np.log(np.exp(dense_inputs)-2, out=np.zeros_like(dense_inputs), where=(dense_inputs>1))
-                    # sparse_inputs = sparse_inputs.astype(np.int64)
-                    # target_labels = target_labels.astype(np.float64)
+                    dense_inputs = np.log(np.exp(dense_inputs)-2, out=np.zeros_like(dense_inputs), where=(dense_inputs>1))
+                    sparse_inputs = sparse_inputs.astype(np.int64)
+                    target_labels = target_labels.astype(np.float64)
                 #   dense_inputs = np.log(np.exp(dense_inputs)-2)
 
                 if mysettings.NEW_DATASET == False and (SETTING == 4 or SETTING == 5):
