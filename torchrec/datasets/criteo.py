@@ -198,7 +198,7 @@ if False and 1 < index_split_num:
 
     #return i2mapped
 
-sigma_np = np.array([np.sqrt(rows_count)/5.0 for rows_count in mysettings.LN_EMB])
+sigma_np = np.array([np.sqrt(rows_count) for rows_count in mysettings.LN_EMB])
 mu_np = np.array([0.0 for _ in mysettings.LN_EMB])
 cache = np.random.normal(mu_np,sigma_np, size=(index_split_num - 1, len(mu_np)))
 for k, e in enumerate(mysettings.LN_EMB):
@@ -226,8 +226,8 @@ def make_new_batch(lS_o, lS_i):
         indices = c[ np.logical_and(c>=0, c < ln_emb[k]) ]
 
         s = k * batch_size
-        lS_o[s : s + batch_size] = torch.tensor(offsets[:]).long()
-        multi_hot_i_l.append(torch.Tensor(indices).long())
+        lS_o[s : s + batch_size] = torch.tensor(offsets[:]).int()
+        multi_hot_i_l.append(torch.Tensor(indices).int())
 
     lS_o.data.copy_(torch.cumsum( torch.concat((torch.tensor([0]), lS_o[:-1])), axis=0))
     return lS_o, multi_hot_i_l
