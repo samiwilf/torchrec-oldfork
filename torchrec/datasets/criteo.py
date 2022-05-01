@@ -116,7 +116,7 @@ import sys
 import functools
 #def make_new_indices(datacounts, index_dist, custom_dist, M):
 index_split_num = 20
-if 1 < index_split_num:
+if False and 1 < index_split_num:
     index_dist = "normal"
     custom_dist = []
     datacounts = mysettings.LN_EMB
@@ -198,24 +198,39 @@ if 1 < index_split_num:
 
     #return i2mapped
 
+sigma_np = np.array([np.sqrt(rows_count)/5.0 for rows_count in mysettings.LN_EMB])
+mu_np = np.array([0.0 for _ in mysettings.LN_EMB])
+cache = np.random.normal(mu_np,sigma_np, size=(index_split_num - 1, len(mu_np)))
+for k, e in enumerate(mysettings.LN_EMB):
+    if e < 200:
+        cache[:,k]=float('-inf')
+cache = np.append(mu_np[np.newaxis,:], cache, axis=0)
+cache = np.sort(cache, axis=0)
 
-def make_new_batch(lS_o, lS_i, i2mapped):
-
+def make_new_batch(lS_o, lS_i):
+    ln_emb = mysettings.LN_EMB
     cf = len(lS_o)
-    if 1 < index_split_num:
-        multi_hot_i_l = []
-        for cat_fea in range(cf):
-            if i2mapped[cat_fea] is not None:
-                multi_hot_i = torch.nn.functional.embedding(lS_i[cat_fea], i2mapped[cat_fea])
-                multi_hot_i = multi_hot_i.transpose(0,1).reshape(-1).long()
-                multi_hot_i_l.append(multi_hot_i)
-                lS_o[cat_fea] = lS_o[cat_fea] * index_split_num
-            else:
-                multi_hot_i_l.append(lS_i[cat_fea])
-        return lS_o, multi_hot_i_l
+    batch_size = lS_i.shape[1]
+    multi_hot_i_l = []
+    for k, e in enumerate(ln_emb):
 
+        b = lS_i[k,:].numpy()
+        b = np.repeat(b[:, np.newaxis], index_split_num, axis=-1)
 
+        a = cache[:,k]
+        a = np.repeat(a[np.newaxis, :], batch_size, axis=0)
 
+        c = a + b
+
+        offsets = np.sum( np.logical_and(c >= 0, c < ln_emb[k]), axis = -1)
+        indices = c[ np.logical_and(c>=0, c < ln_emb[k]) ]
+
+        s = k * batch_size
+        lS_o[s : s + batch_size] = torch.tensor(offsets[:]).long()
+        multi_hot_i_l.append(torch.Tensor(indices).long())
+
+    lS_o.data.copy_(torch.cumsum( torch.concat((torch.tensor([0]), lS_o[:-1])), axis=0))
+    return lS_o, multi_hot_i_l
 
 class CriteoIterDataPipe(IterDataPipe):
     """
@@ -986,7 +1001,7 @@ class InMemoryBinaryCriteoIterDataPipe(IterableDataset):
         lS_i = sparse.transpose(1, 0)
         lS_i = torch.from_numpy(lS_i)
         if 1 < index_split_num:
-            lS_o, lS_i = make_new_batch(lS_o, lS_i, i2mapped_global)
+            lS_o, lS_i = make_new_batch(lS_o, lS_i)
 
             # for cat_fea in range(CAT_FEATURE_COUNT):
             #     for j in range(BATCH_SIZE):
