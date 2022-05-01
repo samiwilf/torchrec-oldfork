@@ -115,7 +115,7 @@ import torch.distributions as tdist
 import sys
 import functools
 #def make_new_indices(datacounts, index_dist, custom_dist, M):
-index_split_num = 1
+index_split_num = 20
 if 1 < index_split_num:
     index_dist = "normal"
     custom_dist = []
@@ -138,13 +138,10 @@ if 1 < index_split_num:
             )
 
     for j in range(fc):
-
         T = datacounts[j]
-        # if T < th:
-        #     for i in range(T):
-        #         #i2mapped_global[j][i] = [i]
-        #         i2mapped_global[j,i] = [i]
-        #     continue
+        if T < th:
+            i2mapped_global[j] = None
+            continue
         t2 = int(T / 2)
         if T % 2 == 1:
             x0 = torch.arange(-t2, t2 + 1)
@@ -202,40 +199,20 @@ if 1 < index_split_num:
     #return i2mapped
 
 
-def make_new_batch(lS_i, i2mapped):
+def make_new_batch(lS_o, lS_i, i2mapped):
 
-    cf = CAT_FEATURE_COUNT #len(lS_o)
+    cf = len(lS_o)
     if 1 < index_split_num:
         multi_hot_i_l = []
         for cat_fea in range(cf):
-            multi_hot_i = torch.nn.functional.embedding(lS_i[cat_fea], i2mapped[cat_fea])
-            multi_hot_i = multi_hot_i.transpose(0,1).reshape(-1).long()
-            multi_hot_i_l.append(multi_hot_i)
-        return multi_hot_i_l
-    else:
-        #lS_o_new = [ [None] for _ in range(cf)]
-        lS_i_new = [ [None] for _ in range(cf)]
-
-        for cat_fea in range(cf):
-            bb = BATCH_SIZE #lS_o[cat_fea].shape[0]  # check this in dlrm_s_pytorch.py to see what bb is there.
-            # print(cat_fea, bb, lS_i[cat_fea].shape[0])
-            #lS_o_new[cat_fea] = torch.empty(size=(bb,),dtype=torch.long)
-            lS_i_new[cat_fea] = torch.empty(size=(bb*index_split_num,),dtype=torch.long)
-            #lS_i_new[cat_fea] = torch.empty(size=(0,),dtype=torch.long)
-            b_ind = lS_i[cat_fea].tolist()
-            M = 1
-            for k, ind in enumerate(b_ind):
-                indset = torch.tensor(i2mapped[cat_fea][ind], dtype=torch.long)
-                lS_i_new[cat_fea][k*index_split_num : (k+1)*index_split_num] = indset[:]
-                #if M == 1:
-                #    M = indset.shape[0]
-                #lS_i_new[cat_fea] = torch.cat((lS_i_new[cat_fea], indset), dim=0)
-        return lS_i_new
-
-
-
-
-
+            if i2mapped[cat_fea] is not None:
+                multi_hot_i = torch.nn.functional.embedding(lS_i[cat_fea], i2mapped[cat_fea])
+                multi_hot_i = multi_hot_i.transpose(0,1).reshape(-1).long()
+                multi_hot_i_l.append(multi_hot_i)
+                lS_o[cat_fea] = lS_o[cat_fea] * index_split_num
+            else:
+                multi_hot_i_l.append(lS_i[cat_fea])
+        return lS_o, multi_hot_i_l
 
 
 
@@ -1009,7 +986,7 @@ class InMemoryBinaryCriteoIterDataPipe(IterableDataset):
         lS_i = sparse.transpose(1, 0)
         lS_i = torch.from_numpy(lS_i)
         if 1 < index_split_num:
-            lS_i = make_new_batch(lS_i, i2mapped_global)
+            lS_o, lS_i = make_new_batch(lS_o, lS_i, i2mapped_global)
 
             # for cat_fea in range(CAT_FEATURE_COUNT):
             #     for j in range(BATCH_SIZE):
@@ -1024,7 +1001,7 @@ class InMemoryBinaryCriteoIterDataPipe(IterableDataset):
                         values=lS_i.contiguous(),
                         #lengths=lS_o[1:] - lS_o[:-1], #self.lengths,
                         #lengths=self.lengths*index_split_num,
-                        offsets=lS_o*index_split_num,
+                        offsets=lS_o,
                         #stride=self.stride,
                         #length_per_key=self.length_per_key*index_split_num,
                         #offset_per_key=self.offset_per_key*index_split_num,
