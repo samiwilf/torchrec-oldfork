@@ -116,8 +116,7 @@ import sys
 import functools
 #def make_new_indices(datacounts, index_dist, custom_dist, M):
 index_split_num = 20
-
-sigma_np = np.array([rows_count//5 for rows_count in mysettings.LN_EMB])
+sigma_np = np.array([(rows_count)//20 for rows_count in mysettings.LN_EMB])
 mu_np = np.array([0.0 for _ in mysettings.LN_EMB])
 cache_l = [np.random.normal(mu_np,sigma_np, size=(index_split_num - 1, len(mu_np))) for _ in range(2048)]
 for i, cache in enumerate(cache_l):
@@ -139,21 +138,24 @@ def make_new_batch(lS_o, lS_i):
     cf = len(lS_o)
     batch_size = lS_i.shape[1]
     multi_hot_i_l = []
+    s = 0
     for k, e in enumerate(ln_emb):
 
         b = lS_i[k,:].numpy()
         b = np.repeat(b[:, np.newaxis], index_split_num, axis=-1)
 
-        a = caches[:,:,k]
+        a = caches[0,:,k]
+        #a = caches[0,:,0]
+        #a = caches[:,:,0]
 
         c = a + b
 
         offsets = np.sum( np.logical_and(c >= 0, c < ln_emb[k]), axis = -1)
         indices = c[ np.logical_and(c>=0, c < ln_emb[k]) ]
 
-        s = k * batch_size
         lS_o[s : s + batch_size] = torch.tensor(offsets[:]).int()
         multi_hot_i_l.append(torch.Tensor(indices).int())
+        s += batch_size
 
     lS_o.data.copy_(torch.cumsum( torch.concat((torch.tensor([0]), lS_o[:-1])), axis=0))
     return lS_o, multi_hot_i_l
