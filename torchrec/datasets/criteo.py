@@ -116,96 +116,23 @@ import sys
 import functools
 #def make_new_indices(datacounts, index_dist, custom_dist, M):
 index_split_num = 20
-if False and 1 < index_split_num:
-    index_dist = "normal"
-    custom_dist = []
-    datacounts = mysettings.LN_EMB
-    M = index_split_num
-    fc = len(datacounts)
-    #i2mapped_global = [{} for _ in range(fc)]  # use this dict to transform lS_i, lS_o: index --> [i1, i2, ...]
-    i2mapped_global = [torch.zeros((datacounts[i],index_split_num)) for i in range(fc)]
-    #i2mapped_global = torch.zeros((fc, 2048, index_split_num))
-    # th is the minimum index range to which multi-index construction is applied
-    # A is size of large pool of numbers sampled from distribution, it's pre-chosen
-    # periodically since calls to np.random.choice() are slow
-    th = 200
-    A = 1000000
 
-    for j in range(fc):
-        if datacounts[j] >= th and datacounts[j] < M:
-            sys.exit(
-                "ERROR: The number of values in multi-index exceeds index range"
-            )
-
-    for j in range(fc):
-        T = datacounts[j]
-        if T < th:
-            i2mapped_global[j] = None
-            continue
-        t2 = int(T / 2)
-        if T % 2 == 1:
-            x0 = torch.arange(-t2, t2 + 1)
-        else:
-            x0 = torch.arange(-t2 + 1, t2)
-        xU, xL = x0 + 0.5, x0 - 0.5
-        if len(custom_dist) == 0:
-            if index_dist == "normal":
-                std = 0.1
-                stdj = std * T
-                nd = tdist.Normal(torch.tensor([0.0]), torch.tensor([stdj]))
-                prob = nd.cdf(xU) - nd.cdf(xL)
-            elif index_dist == "uniform":
-                ud = tdist.Uniform(torch.tensor([-t2-1]), torch.tensor([t2+1]))
-                prob = ud.cdf(xU) - ud.cdf(xL)
-        else:
-            prob = transform_custom(custom_dist, len(x0))
-        if not isinstance(prob, np.ndarray):
-            prob = prob.cpu().numpy()
-        prob[prob < 0] = 0
-        prob = prob / np.sum(prob)          # normalize the probabilities so their sum is 1
-        general = np.random.choice(x0, size = A, p = prob, replace=True)
-
-        k = 0
-        for i in range(T):
-            indset = general[k : k + M]
-            t = 2
-            indset = np.unique(indset)
-            indset = indset[np.logical_and(indset >= -i, indset < T - i)]
-            while len(indset) < M:
-                if k + t * M > A:
-                    k = k % A
-                    t = 2
-                    general = np.random.choice(x0, size = A, p = prob, replace=True)
-                    indset2 = general[k : k + M]
-                    indset = np.concatenate((indset, indset2), axis=0)
-                    indset = np.unique(indset)
-                    indset = indset[np.logical_and(indset >= -i, indset < T - i)]
-                else:
-                    indset2 = general[k : k + t * M]
-                    indset = np.concatenate((indset, indset2), axis=0)
-                    indset = np.unique(indset)
-                    indset = indset[np.logical_and(indset >= -i, indset < T - i)]
-                    t += 1
-
-            indset = indset[:M] + i    # always inside [0,T)
-            k += M
-            if k >= A:
-                k = k % A
-                general = np.random.choice(x0, size = A, p = prob, replace=True)
-            i2mapped_global[j][i] = torch.from_numpy(indset)
-            # if i % 50000 == 0:
-            #     print(j, i, i2mapped[j][i])
-
-    #return i2mapped
-
-sigma_np = np.array([np.sqrt(rows_count) for rows_count in mysettings.LN_EMB])
+sigma_np = np.array([rows_count//5 for rows_count in mysettings.LN_EMB])
 mu_np = np.array([0.0 for _ in mysettings.LN_EMB])
-cache = np.random.normal(mu_np,sigma_np, size=(index_split_num - 1, len(mu_np)))
-for k, e in enumerate(mysettings.LN_EMB):
-    if e < 200:
-        cache[:,k]=float('-inf')
-cache = np.append(mu_np[np.newaxis,:], cache, axis=0)
-cache = np.sort(cache, axis=0)
+cache_l = [np.random.normal(mu_np,sigma_np, size=(index_split_num - 1, len(mu_np))) for _ in range(2048)]
+for i, cache in enumerate(cache_l):
+    for k, e in enumerate(mysettings.LN_EMB):
+        if e < 200:
+            cache[:,k]=float('-inf')
+    cache = np.append(mu_np[np.newaxis,:], cache, axis=0)
+    cache_l[i] = np.sort(cache, axis=0)
+caches = np.stack(cache_l)
+# cache = np.random.normal(mu_np,sigma_np, size=(index_split_num - 1, len(mu_np)))
+# for k, e in enumerate(mysettings.LN_EMB):
+#     if e < 200:
+#         cache[:,k]=float('-inf')
+# cache = np.append(mu_np[np.newaxis,:], cache, axis=0)
+# cache = np.sort(cache, axis=0)
 
 def make_new_batch(lS_o, lS_i):
     ln_emb = mysettings.LN_EMB
@@ -217,8 +144,7 @@ def make_new_batch(lS_o, lS_i):
         b = lS_i[k,:].numpy()
         b = np.repeat(b[:, np.newaxis], index_split_num, axis=-1)
 
-        a = cache[:,k]
-        a = np.repeat(a[np.newaxis, :], batch_size, axis=0)
+        a = caches[:,:,k]
 
         c = a + b
 
