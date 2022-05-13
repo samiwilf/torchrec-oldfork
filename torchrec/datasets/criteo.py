@@ -144,9 +144,10 @@ def make_new_batch(lS_o, lS_i):
         b = lS_i[k,:].numpy()
         b = np.repeat(b[:, np.newaxis], index_split_num, axis=-1)
 
-        a = caches[0,:,k]
-        #a = caches[0,:,0]
-        #a = caches[:,:,0]
+        a = caches[:,:,k]
+        # a = caches[0,:,k]
+        # a = caches[0,:,0]
+        # a = caches[:,:,0]
 
         c = a + b
 
@@ -158,7 +159,9 @@ def make_new_batch(lS_o, lS_i):
         s += batch_size
 
     lS_o.data.copy_(torch.cumsum( torch.concat((torch.tensor([0]), lS_o[:-1])), axis=0))
-    return lS_o, multi_hot_i_l
+
+    lS_i = torch.cat(multi_hot_i_l)
+    return lS_o, lS_i
 
 class CriteoIterDataPipe(IterDataPipe):
     """
@@ -928,14 +931,14 @@ class InMemoryBinaryCriteoIterDataPipe(IterableDataset):
         lS_o = self.offsets.contiguous()
         lS_i = sparse.transpose(1, 0)
         lS_i = torch.from_numpy(lS_i)
-        if 1 < index_split_num:
-            lS_o, lS_i = make_new_batch(lS_o, lS_i)
+        # if 1 < index_split_num:
+        #     lS_o, lS_i = make_new_batch(lS_o, lS_i)
 
             # for cat_fea in range(CAT_FEATURE_COUNT):
             #     for j in range(BATCH_SIZE):
             #         lS_o[cat_fea][j] = lS_o[cat_fea][j] * index_split_num
 
-            lS_i = torch.cat(lS_i)
+            # lS_i = torch.cat(lS_i)
         lS_i = lS_i.reshape(-1).contiguous()
 
         sparse_features=KeyedJaggedTensor.from_offsets_sync(

@@ -39,7 +39,6 @@ from torchrec.mysettings import (
     MODEL_EVAL,
 )
 
-
 # OSS import
 try:
     # pyre-ignore[21]
@@ -49,6 +48,8 @@ try:
     # pyre-ignore[21]
     # @manual=//torchrec/github/examples/dlrm/modules:dlrm_train
     from modules.dlrm_train import DLRMTrain
+
+    from multi_hot import multihot
 except ImportError:
     pass
 
@@ -232,6 +233,12 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
         type=int,
         default=None,
         help="Frequency at which validation will be run within an epoch.",
+    )
+    parser.add_argument(
+        "--index_split_num",
+        type=int,
+        default=1,
+        help="The number of Multi-hot indices to use. When 1, multi-hot is disabled.",
     )
     parser.set_defaults(pin_memory=None)
     return parser.parse_args(argv)
@@ -550,6 +557,12 @@ def main(argv: List[str]) -> None:
     val_dataloader = get_dataloader(args, backend, "val")
     # pyre-ignore[16]
     test_dataloader = get_dataloader(args, backend, "test")
+
+    if 1 < args.index_split_num:
+        m = multihot(args.index_split_num, args.num_embeddings_per_feature, args.batch_size)
+        train_dataloader = map(m.convert_to_multi_hot, train_dataloader)
+        val_dataloader = map(m.convert_to_multi_hot, val_dataloader)
+        test_dataloader = map(m.convert_to_multi_hot, test_dataloader)
 
     train_val_test(
         args, train_pipeline, train_dataloader, val_dataloader, test_dataloader
