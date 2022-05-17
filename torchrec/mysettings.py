@@ -140,6 +140,7 @@ for f in [LOG_FILE, DENSE_LOG_FILE, SPARSE_LOG_FILE, D_OUT_LOG_FILE, E_OUT_LOG_F
     except:
         pass
 
+import time
 COMMON_ARGV = [
     '--batch_size', str(BATCH_SIZE),
     '--num_embeddings_per_feature', ','.join([str(x) for x in LN_EMB]),
@@ -151,7 +152,7 @@ COMMON_ARGV = [
     '--validation_freq_within_epoch','30000',
     '--mlperf_logging',
     '--multi_hot_size','20',
-    '--tensor_board_filename', '20-hot-Adagrad-LR0.01-TB-data',
+    '--tensor_board_filename', '20-hot-Adagrad-LR0.01-TB-data-' + str(int(time.time())),
     '--adagrad',
 ]
 

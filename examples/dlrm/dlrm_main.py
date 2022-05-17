@@ -106,11 +106,11 @@ class TestEBCSharder(EmbeddingBagCollectionSharder):
                 ]
             self._kernel_type = [
                 #EmbeddingComputeKernel.DENSE.value,
-                EmbeddingComputeKernel.SPARSE.value,
+                #EmbeddingComputeKernel.SPARSE.value,
                 #EmbeddingComputeKernel.BATCHED_DENSE.value,
                 #EmbeddingComputeKernel.BATCHED_FUSED.value,
                 #EmbeddingComputeKernel.BATCHED_FUSED_UVM.value,
-                #EmbeddingComputeKernel.BATCHED_FUSED_UVM_CACHING.value,
+                EmbeddingComputeKernel.BATCHED_FUSED_UVM_CACHING.value,
                 #EmbeddingComputeKernel.BATCHED_QUANT.value,
             ]
     """
@@ -287,7 +287,7 @@ def _evaluate(
     next_iterator: Iterator[Batch],
     stage: str,
     writer: SummaryWriter,
-    log_iter: int = -1,
+    log_iter: int = None,
 
 ) -> None:
     """
@@ -309,6 +309,8 @@ def _evaluate(
     Returns:
         None.
     """
+    if log_iter == None:
+        return
     model = train_pipeline._model
     if MODEL_EVAL:
         model.eval()
@@ -471,6 +473,15 @@ def _train(
             it += 1
         except StopIteration:
             break
+    _evaluate(
+        args,
+        train_pipeline,
+        iter(within_epoch_val_dataloader),
+        iterator,
+        "val",
+        writer,
+        it
+    )
 
 
 def train_val_test(
@@ -677,7 +688,7 @@ def main(argv: List[str]) -> None:
         "optimizer": OptimType.EXACT_ROWWISE_ADAGRAD if args.adagrad else OptimType.EXACT_SGD,
     }
 
-    if True:
+    if False:
         sharders = TestEBCSharder(
                         fused_params=fused_params,
                     )
