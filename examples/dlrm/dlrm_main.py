@@ -510,10 +510,10 @@ def train_val_test(
     """
     global writer
     tb_file = "./" + args.tensor_board_filename
-    try:
-        shutil.rmtree(tb_file)
-    except:
-        pass
+    #try:
+    #    shutil.rmtree(tb_file)
+    #except:
+    #    pass
     writer = SummaryWriter(tb_file)
     if args.mlperf_logging:
         mlperf_logger.log_event(key=mlperf_logger.constants.CACHE_CLEAR, value=True)
