@@ -119,13 +119,13 @@ index_split_num = 1
 sigma_np = np.array([(rows_count)//20 for rows_count in mysettings.LN_EMB])
 mu_np = np.array([0.0 for _ in mysettings.LN_EMB])
 cache_l = [np.random.normal(mu_np,sigma_np, size=(index_split_num - 1, len(mu_np))) for _ in range(2048)]
-for i, cache in enumerate(cache_l):
-    for k, e in enumerate(mysettings.LN_EMB):
-        if e < 200:
-            cache[:,k]=float('-inf')
-    cache = np.append(mu_np[np.newaxis,:], cache, axis=0)
-    cache_l[i] = np.sort(cache, axis=0)
-caches = np.stack(cache_l)
+# for i, cache in enumerate(cache_l):
+#     for k, e in enumerate(mysettings.LN_EMB):
+#         if e < 200:
+#             cache[:,k]=float('-inf')
+#     cache = np.append(mu_np[np.newaxis,:], cache, axis=0)
+#     cache_l[i] = np.sort(cache, axis=0)
+# caches = np.stack(cache_l)
 # cache = np.random.normal(mu_np,sigma_np, size=(index_split_num - 1, len(mu_np)))
 # for k, e in enumerate(mysettings.LN_EMB):
 #     if e < 200:
@@ -928,14 +928,14 @@ class InMemoryBinaryCriteoIterDataPipe(IterableDataset):
         lS_o = self.offsets.contiguous()
         lS_i = sparse.transpose(1, 0)
         lS_i = torch.from_numpy(lS_i)
-        if 1 < index_split_num:
-            lS_o, lS_i = make_new_batch(lS_o, lS_i)
-
-            # for cat_fea in range(CAT_FEATURE_COUNT):
-            #     for j in range(BATCH_SIZE):
-            #         lS_o[cat_fea][j] = lS_o[cat_fea][j] * index_split_num
-
-            lS_i = torch.cat(lS_i)
+        # if False and 1 < index_split_num:
+        #     lS_o, lS_i = make_new_batch(lS_o, lS_i)
+        #
+        #     # for cat_fea in range(CAT_FEATURE_COUNT):
+        #     #     for j in range(BATCH_SIZE):
+        #     #         lS_o[cat_fea][j] = lS_o[cat_fea][j] * index_split_num
+        #
+        #     lS_i = torch.cat(lS_i)
         lS_i = lS_i.reshape(-1).contiguous()
 
         sparse_features=KeyedJaggedTensor.from_offsets_sync(

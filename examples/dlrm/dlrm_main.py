@@ -60,6 +60,8 @@ try:
     # pyre-ignore[21]
     # @manual=//torchrec/github/examples/dlrm/modules:dlrm_train
     from modules.dlrm_train import DLRMTrain
+    from multi_hot import multihot
+    from multi_hot import multihot_uniform
 except ImportError:
     pass
 
@@ -261,7 +263,18 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
         action="store_true",
         default=False
     )
-
+    parser.add_argument(
+        "--multi_hot_size",
+        type=int,
+        default=1,
+        help="The number of Multi-hot indices to use. When 1, multi-hot is disabled.",
+    )
+    parser.add_argument(
+        "--multi_hot_min_table_size",
+        type=int,
+        default=200,
+        help="The minimum number of rows an embedding table must have to run multi-hot inputs.",
+    )
     parser.set_defaults(pin_memory=None)
     return parser.parse_args(argv)
 
@@ -708,13 +721,17 @@ def main(argv: List[str]) -> None:
         device,
     )
 
-    # TODO add CriteoIterDataPipe support and add random_dataloader arg
-    # pyre-ignore[16]
+
     train_dataloader = get_dataloader(args, backend, "train")
-    # pyre-ignore[16]
     val_dataloader = get_dataloader(args, backend, "val")
-    # pyre-ignore[16]
     test_dataloader = get_dataloader(args, backend, "test")
+
+    if 1 < args.multi_hot_size:
+        #m = multihot(args.multi_hot_size, args.num_embeddings_per_feature, args.batch_size)
+        m = multihot_uniform(args.multi_hot_size, args.multi_hot_min_table_size, args.num_embeddings_per_feature, args.batch_size)
+        train_dataloader = map(m.convert_to_multi_hot, train_dataloader)
+        val_dataloader = map(m.convert_to_multi_hot, val_dataloader)
+        test_dataloader = map(m.convert_to_multi_hot, test_dataloader)
 
     train_val_test(
         args, train_pipeline, train_dataloader, val_dataloader, test_dataloader,
