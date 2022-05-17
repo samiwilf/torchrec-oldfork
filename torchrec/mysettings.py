@@ -149,8 +149,8 @@ COMMON_ARGV = [
     '--learning_rate', '1.0',
     '--num_workers', '4',
     '--validation_freq_within_epoch','30000',
-    '--mlperf_logging'
-
+    '--mlperf_logging',
+    '--multi_hot_size','20'
 ]
 
 if SETTING != 5 and SETTING != 4:
