@@ -133,12 +133,12 @@ for f in [LOG_FILE, DENSE_LOG_FILE, SPARSE_LOG_FILE, D_OUT_LOG_FILE, E_OUT_LOG_F
         f.unlink()
     except:
         pass
-    try:
-        import shutil
-        dir_path = 'tensorboard_file'
-        shutil.rmtree(dir_path)
-    except:
-        pass
+    # try:
+    #     import shutil
+    #     dir_path = 'tensorboard_file'
+    #     shutil.rmtree(dir_path)
+    # except:
+    #     pass
 
 import time
 COMMON_ARGV = [
@@ -147,13 +147,12 @@ COMMON_ARGV = [
     '--epochs', '1',
     # '--in_memory_binary_criteo_path', '/home/ubuntu/mountpoint/criteo_terabyte_subsample0.0_maxind40M',
     '--pin_memory',
-    '--learning_rate', '0.01',
+    '--learning_rate', '1.0',
     '--num_workers', '4',
     '--validation_freq_within_epoch','30000',
     '--mlperf_logging',
-    '--multi_hot_size','10',
-    '--tensor_board_filename', '10-hot-Uniform-Adagrad-LR0.01-TB-data-' + str(int(time.time())),
-    '--adagrad',
+    '--multi_hot_size','1',
+    '--tensor_board_filename', '1-hot-SGD-LR1-TB-data-' + str(int(time.time())),
 ]
 
 if SETTING != 5 and SETTING != 4:
