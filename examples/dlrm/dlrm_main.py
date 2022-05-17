@@ -473,16 +473,7 @@ def _train(
             it += 1
         except StopIteration:
             break
-    _evaluate(
-        args,
-        train_pipeline,
-        iter(within_epoch_val_dataloader),
-        iterator,
-        "val",
-        writer,
-        it
-    )
-
+    return it
 
 def train_val_test(
     args: argparse.Namespace,
@@ -576,7 +567,7 @@ def train_val_test(
             )
 
         val_iterator = iter(val_dataloader)
-        _train(
+        it = _train(
             args, train_pipeline, train_iterator, val_iterator, val_dataloader, epoch, writer
         )
         train_iterator = iter(train_dataloader)
@@ -592,7 +583,7 @@ def train_val_test(
                     mlperf_logger.constants.EPOCH_NUM: epoch+1
                 },
             )
-        _evaluate(args, train_pipeline, val_iterator, val_next_iterator, "val", writer)
+        it = _evaluate(args, train_pipeline, val_iterator, val_next_iterator, "val", writer, it)
 
         if args.mlperf_logging:
             mlperf_logger.barrier()
@@ -603,7 +594,7 @@ def train_val_test(
                 },
             )
 
-    _evaluate(args, train_pipeline, test_iterator, iter(test_dataloader), "test", writer)
+    it = _evaluate(args, train_pipeline, test_iterator, iter(test_dataloader), "test", writer, it)
 
 
 def main(argv: List[str]) -> None:
