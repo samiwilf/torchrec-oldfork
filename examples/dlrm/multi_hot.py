@@ -119,26 +119,28 @@ class multihot_uniform():
     def __make_new_batch(self, lS_o, lS_i):
         batch_size = self.batch_size
         lS_i = lS_i.reshape(-1, batch_size)
-        multi_hot_i_l = []
 
-        cf = len(lS_o)
         if 1 < self.multi_hot_size:
             multi_hot_i_l = []
-            for cat_fea in range(cf):
-                if self.ln_emb[cat_fea] >= self.multi_hot_min_table_size:
+            for cf, table_length in enumerate(self.ln_emb):
+                if table_length >= self.multi_hot_min_table_size:
 
-                    keys = lS_i[cat_fea] % self.cache_vectors_count
+                    keys = lS_i[cf] % self.cache_vectors_count
 
-                    multi_hot_i = torch.nn.functional.embedding(lS_i[cat_fea], self.cache[cat_fea])
+                    multi_hot_i = torch.nn.functional.embedding(keys, self.cache[cf])
 
-                    multi_hot_i = (multi_hot_i + lS_i[cat_fea]) % self.ln_emb[cat_fea]
+                    multi_hot_i = (multi_hot_i + lS_i[cf].unsqueeze(-1)) % table_length
 
-                    multi_hot_i = multi_hot_i.transpose(0,1).reshape(-1).long()
+                    multi_hot_i = multi_hot_i.reshape(-1).int()
                     multi_hot_i_l.append(multi_hot_i)
-                    lS_o[cat_fea,:] = lS_o[cat_fea,:] * self.multi_hot_size
+                    lS_o[cf*batch_size : (cf+1)*batch_size] = self.multi_hot_size
                 else:
-                    multi_hot_i_l.append(lS_i[cat_fea])
-            return lS_o, torch.cat(multi_hot_i_l)
+                    multi_hot_i_l.append(lS_i[cf])
+                    lS_o[cf*batch_size : (cf+1)*batch_size] = 1.0
+            lS_o.data.copy_(
+                torch.cumsum( torch.concat((torch.tensor([0]), lS_o[:-1])), axis=0))
+            lS_i = torch.cat(multi_hot_i_l)
+            return lS_o, lS_i
         else:
             return lS_o, torch.cat(lS_i)
 
