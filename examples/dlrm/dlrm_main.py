@@ -5,6 +5,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+import shutil
 import argparse
 import itertools
 import os
@@ -498,6 +499,7 @@ def train_val_test(
     """
     global writer
     tb_file = "./" + args.tensor_board_filename
+    shutil.rmtree(tb_file)
     writer = SummaryWriter(tb_file)
     if args.mlperf_logging:
         mlperf_logger.log_event(key=mlperf_logger.constants.CACHE_CLEAR, value=True)
