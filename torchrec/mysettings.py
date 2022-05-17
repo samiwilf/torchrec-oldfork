@@ -150,7 +150,8 @@ COMMON_ARGV = [
     '--num_workers', '4',
     '--validation_freq_within_epoch','30000',
     '--mlperf_logging',
-    '--multi_hot_size','20'
+    '--multi_hot_size','20',
+    '--tensor_board_filename', '20-hot-SGD-LR1-Uniform-TB-data',
 ]
 
 if SETTING != 5 and SETTING != 4:
