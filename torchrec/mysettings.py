@@ -151,8 +151,8 @@ COMMON_ARGV = [
     '--num_workers', '4',
     '--validation_freq_within_epoch','30000',
     '--mlperf_logging',
-    '--multi_hot_size','20',
-    '--tensor_board_filename', '20-hot-Adagrad-LR0.01-TB-data-' + str(int(time.time())),
+    '--multi_hot_size','10',
+    '--tensor_board_filename', '10-hot-Uniform-Adagrad-LR0.01-TB-data-' + str(int(time.time())),
     '--adagrad',
 ]
 
