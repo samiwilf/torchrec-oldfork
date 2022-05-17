@@ -133,6 +133,12 @@ for f in [LOG_FILE, DENSE_LOG_FILE, SPARSE_LOG_FILE, D_OUT_LOG_FILE, E_OUT_LOG_F
         f.unlink()
     except:
         pass
+    try:
+        import shutil
+        dir_path = 'tensorboard_file'
+        shutil.rmtree(dir_path)
+    except:
+        pass
 
 COMMON_ARGV = [
     '--batch_size', str(BATCH_SIZE),
@@ -142,7 +148,9 @@ COMMON_ARGV = [
     '--pin_memory',
     '--learning_rate', '1.0',
     '--num_workers', '4',
-    '--validation_freq_within_epoch','30000'
+    '--validation_freq_within_epoch','30000',
+    '--mlperf_logging'
+
 ]
 
 if SETTING != 5 and SETTING != 4:

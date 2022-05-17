@@ -115,7 +115,7 @@ import torch.distributions as tdist
 import sys
 import functools
 #def make_new_indices(datacounts, index_dist, custom_dist, M):
-index_split_num = 20
+index_split_num = 1
 sigma_np = np.array([(rows_count)//20 for rows_count in mysettings.LN_EMB])
 mu_np = np.array([0.0 for _ in mysettings.LN_EMB])
 cache_l = [np.random.normal(mu_np,sigma_np, size=(index_split_num - 1, len(mu_np))) for _ in range(2048)]

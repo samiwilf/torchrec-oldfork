@@ -12,9 +12,13 @@ import sys
 from typing import cast, Iterator, List, Optional, Dict, Any
 
 import torch
-import torchmetrics as metrics
+#import torchmetrics as metrics
+import torchmetrics
+import sklearn.metrics
+import numpy as np
 from pyre_extensions import none_throws
 from torch import nn, distributed as dist
+from torch.autograd.profiler import record_function
 from torch.utils.data import DataLoader
 from torchrec import EmbeddingBagCollection
 from torchrec.datasets.criteo import DEFAULT_CAT_NAMES, DEFAULT_INT_NAMES
@@ -26,8 +30,15 @@ from torchrec.distributed.types import ModuleSharder
 from torchrec.modules.embedding_configs import EmbeddingBagConfig
 from torchrec.optim.keyed import CombinedOptimizer, KeyedOptimizerWrapper
 from tqdm import tqdm
+from fbgemm_gpu.split_embedding_configs import EmbOptimType as OptimType
 
 from torch.utils.tensorboard import SummaryWriter
+
+import pathlib
+from os import fspath
+p = pathlib.Path(__file__).absolute().parents[1].resolve()
+sys.path.append(fspath(p))
+import mlperf_logger
 
 from torchrec.mysettings import (
     ARGV,
@@ -233,6 +244,24 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
         default=None,
         help="Frequency at which validation will be run within an epoch.",
     )
+    parser.add_argument(
+        "--adagrad",
+        dest="adagrad",
+        action="store_true",
+        help="Flag to determine if adagrad optimizer should be used.",
+    )
+    parser.add_argument(
+        "--tensor_board_filename",
+        type=str,
+        default="tensorboard_file",
+        help="Tensorboard file that will store AUROC information to display in tensorboard.",
+    )
+    parser.add_argument(
+       "--mlperf_logging",
+        action="store_true",
+        default=False
+    )
+
     parser.set_defaults(pin_memory=None)
     return parser.parse_args(argv)
 
@@ -243,6 +272,9 @@ def _evaluate(
     iterator: Iterator[Batch],
     next_iterator: Iterator[Batch],
     stage: str,
+    writer: SummaryWriter,
+    log_iter: int = -1,
+
 ) -> None:
     """
     Evaluate model. Computes and prints metrics including AUROC and Accuracy. Helper
@@ -284,19 +316,32 @@ def _evaluate(
         else itertools.islice(iterator, limit_batches),
         itertools.islice(next_iterator, TRAIN_PIPELINE_STAGES - 1),
     )
-    auroc = metrics.AUROC(compute_on_step=False).to(device)
-    accuracy = metrics.Accuracy(compute_on_step=False).to(device)
+    auroc = torchmetrics.AUROC(compute_on_step=False).to(device)
+    accuracy = torchmetrics.Accuracy(compute_on_step=False).to(device)
+
+
+    if args.mlperf_logging:
+        scores = []
+        targets = []
+
 
     # Infinite iterator instead of while-loop to leverage tqdm progress bar.
     for _ in tqdm(iter(int, 1), desc=f"Evaluating {stage} set"):
         try:
             _loss, logits, labels = train_pipeline.progress(combined_iterator)
+            nn_output = torch.sigmoid(logits)
             labels = labels.int()
-            #auroc(logits, labels)
-            #accuracy(logits, labels)
-            nn_output = torch.nn.functional.sigmoid(logits)
             auroc(nn_output, labels)
             accuracy(nn_output, labels)
+
+            if args.mlperf_logging:
+                Z_test = nn_output
+                T_test = labels
+                S_test = Z_test.detach().cpu().numpy()  # numpy array
+                T_test = T_test.detach().cpu().numpy()  # numpy array
+                scores.append(S_test)
+                targets.append(T_test)
+
         except StopIteration:
             break
     auroc_result = auroc.compute().item()
@@ -304,6 +349,40 @@ def _evaluate(
     if dist.get_rank() == 0:
         print(f"AUROC over {stage} set: {auroc_result}.")
         print(f"Accuracy over {stage} set: {accuracy_result}.")
+        writer.add_scalar("Test/Acc", accuracy_result, log_iter)
+        writer.add_scalar("AUROC", auroc_result, log_iter)
+
+    if args.mlperf_logging:
+        with record_function("DLRM mlperf sklearn metrics compute"):
+            scores = np.concatenate(scores, axis=0)
+            targets = np.concatenate(targets, axis=0)
+
+            metrics = {
+                "recall": lambda y_true, y_score: sklearn.metrics.recall_score(
+                    y_true=y_true, y_pred=np.round(y_score)
+                ),
+                "precision": lambda y_true, y_score: sklearn.metrics.precision_score(
+                    y_true=y_true, y_pred=np.round(y_score)
+                ),
+                "f1": lambda y_true, y_score: sklearn.metrics.f1_score(
+                    y_true=y_true, y_pred=np.round(y_score)
+                ),
+                "ap": sklearn.metrics.average_precision_score,
+                "roc_auc": sklearn.metrics.roc_auc_score,
+                "accuracy": lambda y_true, y_score: sklearn.metrics.accuracy_score(
+                    y_true=y_true, y_pred=np.round(y_score)
+                ),
+            }
+
+        validation_results = {}
+        for metric_name, metric_function in metrics.items():
+            validation_results[metric_name] = metric_function(targets, scores)
+            writer.add_scalar(
+                "mlperf-metrics-test/" + metric_name,
+                validation_results[metric_name],
+                log_iter,
+            )
+
     model.train(True)
 
 
@@ -314,7 +393,7 @@ def _train(
     next_iterator: Iterator[Batch],
     within_epoch_val_dataloader: DataLoader,
     epoch: int,
-    writer,
+    writer: SummaryWriter,
 ) -> None:
     """
     Train model for 1 epoch. Helper function for train_val_test.
@@ -359,7 +438,7 @@ def _train(
     for _ in tqdm(iter(int, 1), desc=f"Epoch {epoch}"):
         try:
             _loss, logits, labels = train_pipeline.progress(combined_iterator)
-            # writer.add_scalar("Train/Loss", _loss, it)
+            writer.add_scalar("Train/Loss", _loss, it)
             if (
                 args.validation_freq_within_epoch
                 and it > 0
@@ -371,6 +450,8 @@ def _train(
                     iter(within_epoch_val_dataloader),
                     iterator,
                     "val",
+                    writer,
+                    it
                 )
 
             it += 1
@@ -402,10 +483,69 @@ def train_val_test(
     Returns:
         None.
     """
-    writer = SummaryWriter("tensorboard_profile")
+    global writer
+    tb_file = "./" + args.tensor_board_filename
+    writer = SummaryWriter(tb_file)
+    if args.mlperf_logging:
+        mlperf_logger.log_event(key=mlperf_logger.constants.CACHE_CLEAR, value=True)
+        mlperf_logger.log_start(
+            key=mlperf_logger.constants.INIT_START, log_all_ranks=True
+        )
+    if args.mlperf_logging:
+        mlperf_logger.barrier()
+        mlperf_logger.log_end(key=mlperf_logger.constants.INIT_STOP)
+        mlperf_logger.barrier()
+        mlperf_logger.log_start(key=mlperf_logger.constants.RUN_START)
+        mlperf_logger.barrier()
+    if args.mlperf_logging:
+        mlperf_logger.mlperf_submission_log("dlrm")
+        mlperf_logger.log_event(
+            key=mlperf_logger.constants.SEED, value=0 #int(args.seed if args.seed is not None else 0)
+        )
+        mlperf_logger.log_event(
+            key=mlperf_logger.constants.GLOBAL_BATCH_SIZE, value=args.batch_size
+        )
+    if args.mlperf_logging:
+        # LR is logged twice for now because of a compliance checker bug
+        mlperf_logger.log_event(
+            key=mlperf_logger.constants.OPT_BASE_LR, value=args.learning_rate
+        )
+        mlperf_logger.log_event(
+            key=mlperf_logger.constants.OPT_LR_WARMUP_STEPS,
+            value=0,
+        )
+
+        # use logging keys from the official HP table and not from the logging library
+        mlperf_logger.log_event(
+            key="sgd_opt_base_learning_rate", value=args.learning_rate
+        )
+        mlperf_logger.log_event(
+            key="lr_decay_start_steps", value=0
+        )
+        mlperf_logger.log_event(
+            key="sgd_opt_learning_rate_decay_steps", value=0
+        )
+        mlperf_logger.log_event(key="sgd_opt_learning_rate_decay_poly_power", value=2)
+
     train_iterator = iter(train_dataloader)
     test_iterator = iter(test_dataloader)
     for epoch in range(args.epochs):
+
+        if args.mlperf_logging:
+            mlperf_logger.barrier()
+            mlperf_logger.log_start(
+                key=mlperf_logger.constants.BLOCK_START,
+                metadata={
+                    mlperf_logger.constants.FIRST_EPOCH_NUM: (epoch+1),
+                    mlperf_logger.constants.EPOCH_COUNT: 1,
+                },
+            )
+            mlperf_logger.barrier()
+            mlperf_logger.log_start(
+                key=mlperf_logger.constants.EPOCH_START,
+                metadata={mlperf_logger.constants.EPOCH_NUM: (epoch+1)},
+            )
+
         val_iterator = iter(val_dataloader)
         _train(
             args, train_pipeline, train_iterator, val_iterator, val_dataloader, epoch, writer
@@ -414,9 +554,27 @@ def train_val_test(
         val_next_iterator = (
             test_iterator if epoch == args.epochs - 1 else train_iterator
         )
-        _evaluate(args, train_pipeline, val_iterator, val_next_iterator, "val")
 
-    _evaluate(args, train_pipeline, test_iterator, iter(test_dataloader), "test")
+        if args.mlperf_logging:
+            mlperf_logger.barrier()
+            mlperf_logger.log_start(
+                key=mlperf_logger.constants.EVAL_START,
+                metadata={
+                    mlperf_logger.constants.EPOCH_NUM: epoch+1
+                },
+            )
+        _evaluate(args, train_pipeline, val_iterator, val_next_iterator, "val", writer)
+
+        if args.mlperf_logging:
+            mlperf_logger.barrier()
+            mlperf_logger.log_end(
+                key=mlperf_logger.constants.EVAL_STOP,
+                metadata={
+                    mlperf_logger.constants.EPOCH_NUM: epoch+1
+                },
+            )
+
+    _evaluate(args, train_pipeline, test_iterator, iter(test_dataloader), "test", writer)
 
 
 def main(argv: List[str]) -> None:
@@ -498,6 +656,7 @@ def main(argv: List[str]) -> None:
     )
     fused_params = {
         "learning_rate": args.learning_rate,
+        "optimizer": OptimType.EXACT_ROWWISE_ADAGRAD if args.adagrad else OptimType.EXACT_SGD,
     }
 
     if True:
@@ -527,7 +686,13 @@ def main(argv: List[str]) -> None:
 
     dense_optimizer = KeyedOptimizerWrapper(
         dict(model.named_parameters()),
+        #lambda params: torch.optim.Adagrad(params, lr=args.learning_rate),
         lambda params: torch.optim.SGD(params, lr=args.learning_rate),
+
+        #if args.adagrad:
+        #    return lambda params: torch.optim.Adagrad(params, lr=args.learning_rate)
+        #else:
+        #    return lambda params: torch.optim.SGD(params, lr=args.learning_rate)
     )
     optimizer = CombinedOptimizer([model.fused_optimizer, dense_optimizer])
 
@@ -552,7 +717,7 @@ def main(argv: List[str]) -> None:
     test_dataloader = get_dataloader(args, backend, "test")
 
     train_val_test(
-        args, train_pipeline, train_dataloader, val_dataloader, test_dataloader
+        args, train_pipeline, train_dataloader, val_dataloader, test_dataloader,
     )
 
 
