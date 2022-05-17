@@ -105,11 +105,11 @@ class TestEBCSharder(EmbeddingBagCollectionSharder):
                 ]
             self._kernel_type = [
                 #EmbeddingComputeKernel.DENSE.value,
-                #EmbeddingComputeKernel.SPARSE.value,
+                EmbeddingComputeKernel.SPARSE.value,
                 #EmbeddingComputeKernel.BATCHED_DENSE.value,
                 #EmbeddingComputeKernel.BATCHED_FUSED.value,
                 #EmbeddingComputeKernel.BATCHED_FUSED_UVM.value,
-                EmbeddingComputeKernel.BATCHED_FUSED_UVM_CACHING.value,
+                #EmbeddingComputeKernel.BATCHED_FUSED_UVM_CACHING.value,
                 #EmbeddingComputeKernel.BATCHED_QUANT.value,
             ]
     """
@@ -728,7 +728,12 @@ def main(argv: List[str]) -> None:
 
     if 1 < args.multi_hot_size:
         #m = multihot(args.multi_hot_size, args.num_embeddings_per_feature, args.batch_size)
-        m = multihot_uniform(args.multi_hot_size, args.multi_hot_min_table_size, args.num_embeddings_per_feature, args.batch_size)
+        m = multihot_uniform(
+            args.multi_hot_size,
+            args.multi_hot_min_table_size,
+            args.num_embeddings_per_feature,
+            args.batch_size
+        )
         train_dataloader = map(m.convert_to_multi_hot, train_dataloader)
         val_dataloader = map(m.convert_to_multi_hot, val_dataloader)
         test_dataloader = map(m.convert_to_multi_hot, test_dataloader)
