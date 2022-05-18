@@ -679,7 +679,7 @@ def main(argv: List[str]) -> None:
         "optimizer": OptimType.EXACT_ROWWISE_ADAGRAD if args.adagrad else OptimType.EXACT_SGD,
     }
 
-    if False:
+    if True:
         sharders = TestEBCSharder(
                         fused_params=fused_params,
                     )
