@@ -36,6 +36,10 @@ class DLRMTrain(nn.Module):
         over_arch_layer_sizes (list[int]): the layer sizes for the OverArch. NOTE: The
             output dimension of the InteractionArch should not be manually specified
             here.
+        interaction_branch1_layer_sizes (Optional(list[int])): the layer sizes for first branch of
+            interaction layer
+        interaction_branch2_layer_sizes (Optional(list[int])):the layer sizes for second branch of
+            interaction layer
         dense_device: (Optional[torch.device]).
 
     Call Args:
@@ -61,6 +65,8 @@ class DLRMTrain(nn.Module):
         dense_in_features: int,
         dense_arch_layer_sizes: List[int],
         over_arch_layer_sizes: List[int],
+        interaction_branch1_layer_sizes: Optional[List[int]] = None,
+        interaction_branch2_layer_sizes: Optional[List[int]] = None,
         dense_device: Optional[torch.device] = None,
     ) -> None:
         super().__init__()
@@ -69,16 +75,17 @@ class DLRMTrain(nn.Module):
             dense_in_features=dense_in_features,
             dense_arch_layer_sizes=dense_arch_layer_sizes,
             over_arch_layer_sizes=over_arch_layer_sizes,
+            interaction_branch1_layer_sizes=interaction_branch1_layer_sizes,
+            interaction_branch2_layer_sizes=interaction_branch2_layer_sizes,
             dense_device=dense_device,
         )
-        #self.loss_fn: nn.Module = nn.BCEWithLogitsLoss()
-        self.loss_fn: nn.Module = nn.BCELoss()
+        self.loss_fn: nn.Module = nn.BCEWithLogitsLoss()
 
     def forward(
         self, batch: Batch
     ) -> Tuple[torch.Tensor, Tuple[torch.Tensor, torch.Tensor, torch.Tensor]]:
         logits = self.model(batch.dense_features, batch.sparse_features)
         logits = logits.squeeze()
-        loss = self.loss_fn(torch.nn.functional.sigmoid(logits), batch.labels.float())
+        loss = self.loss_fn(logits, batch.labels.float())
 
         return loss, (loss.detach(), logits.detach(), batch.labels.detach())

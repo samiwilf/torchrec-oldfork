@@ -276,6 +276,18 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
         default=200,
         help="The minimum number of rows an embedding table must have to run multi-hot inputs.",
     )
+    parser.add_argument(
+        "--interaction_branch1_layer_sizes",
+        type=str,
+        default="",
+        help="Comma separated layer sizes for interaction branch1.",
+    )
+    parser.add_argument(
+        "--interaction_branch2_layer_sizes",
+        type=str,
+        default="",
+        help="Comma separated layer sizes for interaction branch2.",
+    )
     parser.set_defaults(pin_memory=None)
     return parser.parse_args(argv)
 
@@ -672,6 +684,12 @@ def main(argv: List[str]) -> None:
         dense_in_features=len(DEFAULT_INT_NAMES),
         dense_arch_layer_sizes=list(map(int, args.dense_arch_layer_sizes.split(","))),
         over_arch_layer_sizes=list(map(int, args.over_arch_layer_sizes.split(","))),
+        interaction_branch1_layer_sizes=None
+        if args.interaction_branch1_layer_sizes == ""
+        else list(map(int, args.interaction_branch1_layer_sizes.split(","))),
+        interaction_branch2_layer_sizes=None
+        if args.interaction_branch2_layer_sizes == ""
+        else list(map(int, args.interaction_branch2_layer_sizes.split(","))),
         dense_device=device,
     )
     fused_params = {
