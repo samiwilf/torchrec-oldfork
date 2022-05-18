@@ -147,12 +147,15 @@ COMMON_ARGV = [
     '--epochs', '1',
     # '--in_memory_binary_criteo_path', '/home/ubuntu/mountpoint/criteo_terabyte_subsample0.0_maxind40M',
     '--pin_memory',
-    '--learning_rate', '1.00',
+    '--learning_rate', '0.001',
     '--num_workers', '4',
     '--validation_freq_within_epoch','30000',
     '--mlperf_logging',
-    '--multi_hot_size','20',
-    '--tensor_board_filename', '20-hot-SGD-LR1-Uniform-TB-data-' + str(int(time.time())),
+    '--multi_hot_size','1',
+    '--tensor_board_filename', '1-hot-adagrad-LR0.001-Uniform-TB-data-' + str(int(time.time())),
+    '--adagrad',
+    '--interaction_branch1_layer_sizes', '128,512,512,4096',
+    '--interaction_branch2_layer_sizes', '512,512,4096',
 ]
 
 if SETTING != 5 and SETTING != 4:
