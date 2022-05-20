@@ -3,6 +3,9 @@ import numpy as np
 from torchrec.datasets.utils import Batch
 from torchrec.sparse.jagged_tensor import KeyedJaggedTensor
 
+import multi_hot_hasher
+
+
 class multihot():
     def __init__(
         self,
@@ -125,13 +128,15 @@ class multihot_uniform():
             for cf, table_length in enumerate(self.ln_emb):
                 if table_length >= self.multi_hot_min_table_size:
 
-                    keys = lS_i[cf] % self.cache_vectors_count
+                    if False:
+                        keys = lS_i[cf] % self.cache_vectors_count
+                        multi_hot_i = torch.nn.functional.embedding(keys, self.cache[cf])
+                        multi_hot_i = (multi_hot_i + lS_i[cf].unsqueeze(-1)) % table_length
+                        multi_hot_i = multi_hot_i.reshape(-1).int()
+                    else:
+                        multi_hot_i = multi_hot_hasher.meta_1_hot_hasher(cf, table_length, batch_size, lS_i[cf].numpy(), self.multi_hot_size )
+                        multi_hot_i = torch.tensor(np.array(multi_hot_i).reshape(-1))
 
-                    multi_hot_i = torch.nn.functional.embedding(keys, self.cache[cf])
-
-                    multi_hot_i = (multi_hot_i + lS_i[cf].unsqueeze(-1)) % table_length
-
-                    multi_hot_i = multi_hot_i.reshape(-1).int()
                     multi_hot_i_l.append(multi_hot_i)
                     lS_o[cf*batch_size : (cf+1)*batch_size] = self.multi_hot_size
                 else:

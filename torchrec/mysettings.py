@@ -151,10 +151,10 @@ COMMON_ARGV = [
     '--num_workers', '4',
     '--validation_freq_within_epoch','30000',
     '--mlperf_logging',
-    '--multi_hot_size','20',
-    '--tensor_board_filename', '20-hot-attention-SGD-LR1-Uniform-TB-data-' + str(int(time.time())),
-    '--interaction_branch1_layer_sizes', '128,512,512,4096',
-    '--interaction_branch2_layer_sizes', '512,512,4096',
+    '--multi_hot_size','5',
+    '--tensor_board_filename', '5-hot-attention-SGD-LR1-Uniform-TB-data-' + str(int(time.time())),
+    # '--interaction_branch1_layer_sizes', '128,512,512,4096',
+    # '--interaction_branch2_layer_sizes', '512,512,4096',
 ]
 
 if SETTING != 5 and SETTING != 4:
