@@ -15,7 +15,7 @@ namespace py = pybind11;
 const int HASH_MAX_SIZE = 64;
 //static char hash[HASH_MAX_SIZE] = {'0'};
 //static unsigned int lengthOfHash = 0;
-bool computeHash(const std::string& unhashed, std::string& hashed)
+bool computeHash(const std::string& unhashed, std::string& hashed, int sha_num)
 {
     bool success = false;
 
@@ -23,7 +23,12 @@ bool computeHash(const std::string& unhashed, std::string& hashed)
 
     if(context != NULL)
     {
-        if(EVP_DigestInit_ex(context, EVP_sha512(), NULL))
+        if (sha_num == 1)
+            EVP_DigestInit_ex(context, EVP_sha1(), NULL);
+        else if (sha_num == 256)
+            EVP_DigestInit_ex(context, EVP_sha256(), NULL);
+        else //(sha_num == 512)
+            EVP_DigestInit_ex(context, EVP_sha512(), NULL);
         {
             if(EVP_DigestUpdate(context, unhashed.c_str(), unhashed.length()))
             {
@@ -63,7 +68,7 @@ private:
 
 #define VERBOSE_MODE false
 
-Matrix hash_single_vals_to_vecs(int emb_table_index, int N, int batch_size, py::array input_nums, int desired_vector_sizes) {
+Matrix hash_single_vals_to_vecs(int emb_table_index, int N, int batch_size, py::array input_nums, int desired_vector_sizes, int sha_num) {
 
 	py::buffer_info info = input_nums.request();
 	int * input_data = static_cast<int *>(info.ptr);
@@ -79,7 +84,7 @@ Matrix hash_single_vals_to_vecs(int emb_table_index, int N, int batch_size, py::
 
         std::string key = std::to_string(input_data[i]) + "_" + std::to_string(emb_table_index);
         std::string computed_hash;
-        bool was_successful = computeHash(key, computed_hash);
+        bool was_successful = computeHash(key, computed_hash, sha_num);
 
         //int max_allowed_vector_size = computed_hash.length() / hash_piece_size;
 
@@ -126,37 +131,3 @@ PYBIND11_MODULE(multi_hot_hasher, m) {
         );
     });
 }
-
-
-/*
-
-import multi_hot_hasher
-import numpy as np
-emb_table_index = 0
-batch_size = 2048
-N = 10000000
-input_nums = np.random.randint(0,N, size=(batch_size))
-desired_vector_sizes = 10
-
-
-results = multi_hot_hasher.hash_single_vals_to_vecs(emb_table_index, N, batch_size, input_nums, desired_vector_sizes)
-results = np.array(results)
-
-
-
-
-//https://alexsm.com/pybind11-buffer-protocol-opencv-to-numpy/
-python-side usage:
-im = get_image
-np.array(im, copy=False)
-*/
-
-
-/*
-//interesting alternatives
-https://stackoverflow.com/questions/44659924/returning-numpy-arrays-via-pybind11
-https://gist.github.com/abidrahmank/61fcc5230454403c77bd4b407b79f2a5 <-- straight to numpy
-#https://docs.microsoft.com/en-us/visualstudio/python/working-with-c-cpp-python-in-visual-studio?view=vs-2019
-#from ^, run with pip install .
-#C:\_bsln\B\B>pip install .
-*/

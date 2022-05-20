@@ -6,8 +6,8 @@
 # Set env variable:
 # $ export OMP_NUM_THREADS=8
 #
-# Run pip install:
-# $ pip install multi_hot_hasher
+# Change dir and Run pip install:
+# $ cd multi_hot_hasher ; pip install . ; cd ..
 
 # To build & run stand-alone cpp sha hash toy:
 # g++ main.cpp -I/home/ubuntu/anaconda3/envs/torchrec/include/ -L/usr/lib/x86_64-linux-gnu -l:libcrypto.so.1.1

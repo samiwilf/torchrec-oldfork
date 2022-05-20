@@ -41,6 +41,7 @@ p = pathlib.Path(__file__).absolute().parents[1].resolve()
 sys.path.append(fspath(p))
 import mlperf_logger
 
+import torchrec.mysettings as mysettings
 from torchrec.mysettings import (
     ARGV,
     INT_FEATURE_COUNT,
@@ -61,7 +62,6 @@ try:
     # pyre-ignore[21]
     # @manual=//torchrec/github/examples/dlrm/modules:dlrm_train
     from modules.dlrm_train import DLRMTrain
-    from multi_hot import multihot
     from multi_hot import multihot_uniform
 except ImportError:
     pass
@@ -752,12 +752,12 @@ def main(argv: List[str]) -> None:
     test_dataloader = get_dataloader(args, backend, "test")
 
     if 1 < args.multi_hot_size:
-        #m = multihot(args.multi_hot_size, args.num_embeddings_per_feature, args.batch_size)
         m = multihot_uniform(
             args.multi_hot_size,
             args.multi_hot_min_table_size,
             args.num_embeddings_per_feature,
-            args.batch_size
+            args.batch_size,
+            use_sha = mysettings.SHA,
         )
         train_dataloader = map(m.convert_to_multi_hot, train_dataloader)
         val_dataloader = map(m.convert_to_multi_hot, val_dataloader)
