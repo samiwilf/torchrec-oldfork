@@ -12,7 +12,7 @@
 namespace py = pybind11;
 
 //unsigned char hash[EVP_MAX_MD_SIZE];
-const int HASH_MAX_SIZE = 62;
+const int HASH_MAX_SIZE = 64;
 //static char hash[HASH_MAX_SIZE] = {'0'};
 //static unsigned int lengthOfHash = 0;
 bool computeHash(const std::string& unhashed, std::string& hashed)
@@ -23,7 +23,7 @@ bool computeHash(const std::string& unhashed, std::string& hashed)
 
     if(context != NULL)
     {
-        if(EVP_DigestInit_ex(context, EVP_sha224(), NULL))
+        if(EVP_DigestInit_ex(context, EVP_sha512(), NULL))
         {
             if(EVP_DigestUpdate(context, unhashed.c_str(), unhashed.length()))
             {
@@ -60,14 +60,6 @@ private:
     size_t m_rows, m_cols;
     int *m_data;
 };
-
-
-// struct hash_function_args {
-//     int N;
-//     int batch_size;
-//     int input_nums;
-//     int desired_vector_sizes;
-// };
 
 #define VERBOSE_MODE false
 
