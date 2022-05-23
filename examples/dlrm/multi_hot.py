@@ -92,29 +92,48 @@ class multihot_uniform():
         multi_hot_min_table_size,
         ln_emb,
         batch_size,
+        collect_freqs_stats,
     ):
         self.multi_hot_min_table_size = multi_hot_min_table_size
         self.multi_hot_size = multi_hot_size
         self.batch_size = batch_size
         self.ln_emb = ln_emb
         self.cache_vectors_count = 100000
-        self.cache = self.__make_offsets_cache(multi_hot_size, ln_emb)
+        self.lS_i_offsets_cache = self.__make_indices_offsets_cache(multi_hot_size, ln_emb, self.cache_vectors_count)
+        self.lS_o_cache = self.__make_offsets_cache(multi_hot_size, multi_hot_min_table_size, ln_emb, batch_size)
 
 
-    def __make_offsets_cache(self, multi_hot_size, ln_emb):
-        cache = np.zeros((len(ln_emb), self.cache_vectors_count, self.multi_hot_size))
+        # For plotting frequency access
+        self.collect_freqs_stats = collect_freqs_stats
+        self.collect_freqs_stats_temp_disable = False
+        self.freqs_pre_hash = []
+        self.freqs_post_hash = []
+        for row_count in ln_emb:
+            self.freqs_pre_hash.append(np.zeros((row_count)))
+            self.freqs_post_hash.append(np.zeros((row_count)))
+
+    def save_freqs_stats(self):
+        pre_dict = {str(k) : e for k, e in enumerate(self.freqs_pre_hash)}
+        np.save("stats_pre_hash.npy", pre_dict)
+        post_dict = {str(k) : e for k, e in enumerate(self.freqs_post_hash)}
+        np.save("stats_post_hash.npy", post_dict)
+
+    def __make_indices_offsets_cache(self, multi_hot_size, ln_emb, cache_vectors_count):
+        cache = np.zeros((len(ln_emb), cache_vectors_count, multi_hot_size))
         for k, e in enumerate(ln_emb):
             np.random.seed(k)
-            cache[k,:,:] = np.random.randint(0,e, size=(self.cache_vectors_count, self.multi_hot_size))
-        cache = cache.astype(float)
+            cache[k,:,:] = np.random.randint(0, e, size=(cache_vectors_count, multi_hot_size))
         # cache axes are [table, batch, offset]
-        for k, e in enumerate(ln_emb):
-            if e < self.multi_hot_min_table_size:
-                cache[k,:,:]=float('-inf')
-                # cache[:,:,k]=np.iinfo(np.int32).max  #int('-inf')
-        # cache[:,0,:] = 0
-        cache = torch.from_numpy(cache)
+        cache = torch.from_numpy(cache).int()
         return cache
+
+    def __make_offsets_cache(self, multi_hot_size, multi_hot_min_table_size, ln_emb, batch_size):
+        lS_o = torch.ones((len(ln_emb) * self.batch_size), dtype=torch.int32)
+        for cf, table_length in enumerate(ln_emb):
+            if table_length >= multi_hot_min_table_size:
+                lS_o[cf*batch_size : (cf+1)*batch_size] = multi_hot_size
+        lS_o = torch.cumsum( torch.concat((torch.tensor([0]), lS_o)), axis=0)
+        return lS_o
 
     def __make_new_batch(self, lS_o, lS_i):
         batch_size = self.batch_size
@@ -123,29 +142,24 @@ class multihot_uniform():
         if 1 < self.multi_hot_size:
             multi_hot_i_l = []
             for cf, table_length in enumerate(self.ln_emb):
-                if table_length >= self.multi_hot_min_table_size:
-
-                    keys = lS_i[cf] % self.cache_vectors_count
-
-                    multi_hot_i = torch.nn.functional.embedding(keys, self.cache[cf])
-
-                    multi_hot_i = (multi_hot_i + lS_i[cf].unsqueeze(-1)) % table_length
-
-                    multi_hot_i = multi_hot_i.reshape(-1).int()
-                    multi_hot_i_l.append(multi_hot_i)
-                    lS_o[cf*batch_size : (cf+1)*batch_size] = self.multi_hot_size
-                else:
+                if table_length < self.multi_hot_min_table_size:
                     multi_hot_i_l.append(lS_i[cf])
-                    lS_o[cf*batch_size : (cf+1)*batch_size] = 1.0
-            lS_o.data.copy_(
-                torch.cumsum( torch.concat((torch.tensor([0]), lS_o[:-1])), axis=0))
+                else:
+                    keys = lS_i[cf] % self.cache_vectors_count
+                    multi_hot_i_offsets = torch.nn.functional.embedding(keys, self.lS_i_offsets_cache[cf])
+                    multi_hot_i = (multi_hot_i_offsets + lS_i[cf].unsqueeze(-1)) % table_length
+                    multi_hot_i = multi_hot_i.reshape(-1)
+                    multi_hot_i_l.append(multi_hot_i)
+                    if self.collect_freqs_stats:
+                        self.freqs_pre_hash[cf][lS_i[cf]] += 1
+                        self.freqs_post_hash[cf][multi_hot_i] += 1
             lS_i = torch.cat(multi_hot_i_l)
-            return lS_o, lS_i
+            return self.lS_o_cache, lS_i
         else:
-            return lS_o, torch.cat(lS_i)
+            lS_i = torch.cat(lS_i)
+            return self.lS_o, lS_i
 
     def convert_to_multi_hot(self, batch: Batch) -> Batch:
-
         lS_i = batch.sparse_features._values
         lS_o = batch.sparse_features._offsets
         lS_o, lS_i = self.__make_new_batch(lS_o, lS_i)

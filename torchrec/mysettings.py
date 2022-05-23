@@ -165,3 +165,6 @@ if SETTING != 5 and SETTING != 4:
 ARGV = ARGV + COMMON_ARGV
 
 CAT_FEATURE_COUNT = len(ARGV[(ARGV.index('--num_embeddings_per_feature')+1)].split(','))
+
+#86 it/s for 1-hot
+#28 it/s for 20-hot

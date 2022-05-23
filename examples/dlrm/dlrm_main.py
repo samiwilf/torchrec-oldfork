@@ -254,6 +254,12 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
         help="Flag to determine if adagrad optimizer should be used.",
     )
     parser.add_argument(
+        "--collect_freqs_stats",
+        dest="collect_freqs_stats",
+        action="store_true",
+        help="Flag to determine whether to collect stats on freq of embedding access..",
+    )
+    parser.add_argument(
         "--tensor_board_filename",
         type=str,
         default="tensorboard_file",
@@ -422,6 +428,7 @@ def _train(
     within_epoch_val_dataloader: DataLoader,
     epoch: int,
     writer: SummaryWriter,
+    multihot_hash: multihot_uniform,
 ) -> None:
     """
     Train model for 1 epoch. Helper function for train_val_test.
@@ -472,6 +479,8 @@ def _train(
                 and it > 0
                 and it % args.validation_freq_within_epoch == 0
             ):
+                if multihot_hash.collect_freqs_stats:
+                    multihot_hash.collect_freqs_stats_temp_disable = True
                 _evaluate(
                     args,
                     train_pipeline,
@@ -481,10 +490,13 @@ def _train(
                     writer,
                     it
                 )
-
+                if multihot_hash.collect_freqs_stats:
+                    multihot_hash.collect_freqs_stats_temp_disable = False
             it += 1
         except StopIteration:
             break
+    if multihot_hash.collect_freqs_stats:
+        multihot_hash.collect_freqs_stats_temp_disable = False
     return it
 
 def train_val_test(
@@ -493,6 +505,7 @@ def train_val_test(
     train_dataloader: DataLoader,
     val_dataloader: DataLoader,
     test_dataloader: DataLoader,
+    multihot_hash: multihot_uniform
 ) -> None:
     """
     Train/validation/test loop. Contains customized logic to ensure each dataloader's
@@ -580,7 +593,7 @@ def train_val_test(
 
         val_iterator = iter(val_dataloader)
         it = _train(
-            args, train_pipeline, train_iterator, val_iterator, val_dataloader, epoch, writer
+            args, train_pipeline, train_iterator, val_iterator, val_dataloader, epoch, writer, multihot_hash
         )
         train_iterator = iter(train_dataloader)
         val_next_iterator = (
@@ -757,16 +770,19 @@ def main(argv: List[str]) -> None:
             args.multi_hot_size,
             args.multi_hot_min_table_size,
             args.num_embeddings_per_feature,
-            args.batch_size
+            args.batch_size,
+            collect_freqs_stats = args.collect_freqs_stats,
         )
         train_dataloader = map(m.convert_to_multi_hot, train_dataloader)
         val_dataloader = map(m.convert_to_multi_hot, val_dataloader)
         test_dataloader = map(m.convert_to_multi_hot, test_dataloader)
 
     train_val_test(
-        args, train_pipeline, train_dataloader, val_dataloader, test_dataloader,
+        args, train_pipeline, train_dataloader, val_dataloader, test_dataloader, m
     )
 
+    if 1 < args.multi_hot_size and m.collect_freqs_stats:
+        m.save_freqs_stats()
 
 if __name__ == "__main__":
     main(sys.argv[1:])
