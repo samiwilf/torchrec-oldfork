@@ -383,8 +383,8 @@ def _evaluate(
     if dist.get_rank() == 0:
         print(f"AUROC over {stage} set: {auroc_result}.")
         print(f"Accuracy over {stage} set: {accuracy_result}.")
-        writer.add_scalar("Test/Acc", accuracy_result, log_iter)
-        writer.add_scalar("AUROC", auroc_result, log_iter)
+        writer.add_scalar(f"Acc over {stage}", accuracy_result, log_iter)
+        writer.add_scalar(f"AUROC over {stage}", auroc_result, log_iter)
 
     if args.mlperf_logging:
         with record_function("DLRM mlperf sklearn metrics compute"):
@@ -428,8 +428,8 @@ def _train(
     within_epoch_val_dataloader: DataLoader,
     epoch: int,
     writer: SummaryWriter,
-    multihot_hash: multihot_uniform,
-) -> None:
+    multihot_hash: multihot_uniform = None,
+) -> int:
     """
     Train model for 1 epoch. Helper function for train_val_test.
 
@@ -479,7 +479,7 @@ def _train(
                 and it > 0
                 and it % args.validation_freq_within_epoch == 0
             ):
-                if multihot_hash.collect_freqs_stats:
+                if multihot_hash is not None and multihot_hash.collect_freqs_stats:
                     multihot_hash.collect_freqs_stats_temp_disable = True
                 _evaluate(
                     args,
@@ -490,12 +490,12 @@ def _train(
                     writer,
                     it
                 )
-                if multihot_hash.collect_freqs_stats:
+                if multihot_hash is not None and multihot_hash.collect_freqs_stats:
                     multihot_hash.collect_freqs_stats_temp_disable = False
             it += 1
         except StopIteration:
             break
-    if multihot_hash.collect_freqs_stats:
+    if multihot_hash is not None and multihot_hash.collect_freqs_stats:
         multihot_hash.collect_freqs_stats_temp_disable = False
     return it
 
@@ -505,7 +505,7 @@ def train_val_test(
     train_dataloader: DataLoader,
     val_dataloader: DataLoader,
     test_dataloader: DataLoader,
-    multihot_hash: multihot_uniform
+    multihot_hash: multihot_uniform = None,
 ) -> None:
     """
     Train/validation/test loop. Contains customized logic to ensure each dataloader's
@@ -548,7 +548,7 @@ def train_val_test(
             key=mlperf_logger.constants.SEED, value=0 #int(args.seed if args.seed is not None else 0)
         )
         mlperf_logger.log_event(
-            key=mlperf_logger.constants.GLOBAL_BATCH_SIZE, value=args.batch_size
+            key=mlperf_logger.constants.GLOBAL_BATCH_SIZE, value=args.batch_size * dist.get_world_size()
         )
     if args.mlperf_logging:
         # LR is logged twice for now because of a compliance checker bug
@@ -608,7 +608,7 @@ def train_val_test(
                     mlperf_logger.constants.EPOCH_NUM: epoch+1
                 },
             )
-        it = _evaluate(args, train_pipeline, val_iterator, val_next_iterator, "val", writer, it)
+        _evaluate(args, train_pipeline, val_iterator, val_next_iterator, "val", writer, it)
 
         if args.mlperf_logging:
             mlperf_logger.barrier()
@@ -619,7 +619,7 @@ def train_val_test(
                 },
             )
 
-    it = _evaluate(args, train_pipeline, test_iterator, iter(test_dataloader), "test", writer, it)
+    _evaluate(args, train_pipeline, test_iterator, iter(test_dataloader), "test", writer, it)
 
 
 def main(argv: List[str]) -> None:
@@ -764,6 +764,7 @@ def main(argv: List[str]) -> None:
     val_dataloader = get_dataloader(args, backend, "val")
     test_dataloader = get_dataloader(args, backend, "test")
 
+    m = None
     if 1 < args.multi_hot_size:
         #m = multihot(args.multi_hot_size, args.num_embeddings_per_feature, args.batch_size)
         m = multihot_uniform(

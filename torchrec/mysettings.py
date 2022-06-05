@@ -99,7 +99,7 @@ if SETTING == 5:
     INT_FEATURE_COUNT = 13
     #CAT_FEATURE_COUNT = 26
     DAYS = 24
-    BATCH_SIZE = 2048
+    BATCH_SIZE = 256 #2048
     EMB_DIM = 128
 
     #mlperf
@@ -149,18 +149,20 @@ COMMON_ARGV = [
     '--pin_memory',
     '--learning_rate', '1.0',
     '--num_workers', '4',
-    '--validation_freq_within_epoch','30000',
-    '--mlperf_logging',
-    '--multi_hot_size','20',
-    '--tensor_board_filename', '20-hot-attention-SGD-LR1-Uniform-TB-data-' + str(int(time.time())),
-    '--interaction_branch1_layer_sizes', '128,512,512,4096',
-    '--interaction_branch2_layer_sizes', '512,512,4096',
+    #'--validation_freq_within_epoch','30000',
+    '--validation_freq_within_epoch','100000',
+    #'--mlperf_logging',
+    '--multi_hot_size','1',
+    '--tensor_board_filename', '1-hot-SGD-LR1-TB-data-table-wise-batched-fused-256-batch-size-' + str(int(time.time())),
+    #'--tensor_board_filename', '20-hot-attention-SGD-LR1-Uniform-TB-data-' + str(int(time.time())),
+    # '--interaction_branch1_layer_sizes', '128,512,512,4096',
+    # '--interaction_branch2_layer_sizes', '512,512,4096',
 ]
-
+# COMMON_ARGV += ['--limit_train_batches','100', '--limit_val_batches', '100', '--limit_test_batches', '100']
 if SETTING != 5 and SETTING != 4:
     COMMON_ARGV += ['--limit_train_batches', '50', '--limit_val_batches', '5', '--limit_test_batches', '5']
 #COMMON_ARGV += ['--limit_train_batches', '256055', '--limit_val_batches', '5441', '--limit_test_batches', '5431']
-
+# dlrm oss's number is 2048437 instead of 256055 when using 8 gpus. And  2048437 / 256055 ~= 8
 
 ARGV = ARGV + COMMON_ARGV
 
