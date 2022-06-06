@@ -784,9 +784,12 @@ def main(argv: List[str]) -> None:
         val_dataloader = map(m.convert_to_multi_hot, val_dataloader)
         test_dataloader = map(m.convert_to_multi_hot, test_dataloader)
 
+    TOTAL_TRAINING_SAMPLES = 4195197692
+    Thresh = -1
     for k, sample in enumerate(train_dataloader):
-        if k % 100 == 0:
-            print(k)
+        if k > Thresh:
+            Thresh = k + 1000
+            print(4195197692 - k, " steps left.")
     if 1 < args.multi_hot_size and m.collect_freqs_stats:
         m.save_freqs_stats(dist.get_rank())
 
