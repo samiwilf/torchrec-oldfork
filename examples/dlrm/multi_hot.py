@@ -98,7 +98,7 @@ class multihot_uniform():
         self.multi_hot_size = multi_hot_size
         self.batch_size = batch_size
         self.ln_emb = ln_emb
-        self.cache_vectors_count = 100000
+        self.cache_vectors_count = -100000
         self.lS_i_offsets_cache = self.__make_indices_offsets_cache(multi_hot_size, ln_emb, self.cache_vectors_count)
         self.lS_o_cache = self.__make_offsets_cache(multi_hot_size, multi_hot_min_table_size, ln_emb, batch_size)
 
@@ -114,17 +114,19 @@ class multihot_uniform():
 
     def save_freqs_stats(self):
         pre_dict = {str(k) : e for k, e in enumerate(self.freqs_pre_hash)}
-        np.save("stats_pre_hash.npy", pre_dict)
+        np.save("stats_pre_hash_pareto.npy", pre_dict)
         post_dict = {str(k) : e for k, e in enumerate(self.freqs_post_hash)}
-        np.save("stats_post_hash.npy", post_dict)
+        np.save("stats_post_hash_pareto.npy", post_dict)
 
     def __make_indices_offsets_cache(self, multi_hot_size, ln_emb, cache_vectors_count):
-        cache = np.zeros((len(ln_emb), cache_vectors_count, multi_hot_size))
+        # cache = np.zeros((len(ln_emb), cache_vectors_count, multi_hot_size))
+        cache = [ np.zeros((rows_count, multi_hot_size)) for _, rows_count in enumerate(ln_emb) ]
         for k, e in enumerate(ln_emb):
-            np.random.seed(k)
-            cache[k,:,:] = np.random.randint(0, e, size=(cache_vectors_count, multi_hot_size))
+            np.random.seed(k) # The seed is necessary for all ranks produce the same lookup values.
+            #cache[k,:,:] = np.random.randint(0, e, size=(cache_vectors_count, multi_hot_size))
+            cache[k][:,1:] = np.random.pareto(a=0.25, size=(e, multi_hot_size-1)).astype(np.int32) % e
         # cache axes are [table, batch, offset]
-        cache = torch.from_numpy(cache).int()
+        cache = [ torch.from_numpy(table_cache).int() for table_cache in cache ]
         return cache
 
     def __make_offsets_cache(self, multi_hot_size, multi_hot_min_table_size, ln_emb, batch_size):
@@ -145,9 +147,11 @@ class multihot_uniform():
                 if table_length < self.multi_hot_min_table_size:
                     multi_hot_i_l.append(lS_i[cf])
                 else:
-                    keys = lS_i[cf] % self.cache_vectors_count
+                    keys = lS_i[cf] # % self.cache_vectors_count
                     multi_hot_i_offsets = torch.nn.functional.embedding(keys, self.lS_i_offsets_cache[cf])
-                    multi_hot_i = (multi_hot_i_offsets + lS_i[cf].unsqueeze(-1)) % table_length
+                    multi_hot_i_offsets[:,0] = keys
+                    #multi_hot_i = (multi_hot_i_offsets + lS_i[cf].unsqueeze(-1)) % table_length
+                    multi_hot_i = multi_hot_i_offsets
                     multi_hot_i = multi_hot_i.reshape(-1)
                     multi_hot_i_l.append(multi_hot_i)
                     if self.collect_freqs_stats:

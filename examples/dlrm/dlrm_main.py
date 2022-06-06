@@ -784,12 +784,18 @@ def main(argv: List[str]) -> None:
         val_dataloader = map(m.convert_to_multi_hot, val_dataloader)
         test_dataloader = map(m.convert_to_multi_hot, test_dataloader)
 
-    train_val_test(
-        args, train_pipeline, train_dataloader, val_dataloader, test_dataloader, m
-    )
-
+    for k, sample in enumerate(train_dataloader):
+        if k % 100 == 0:
+            print(k)
     if 1 < args.multi_hot_size and m.collect_freqs_stats:
         m.save_freqs_stats()
+
+    # train_val_test(
+    #     args, train_pipeline, train_dataloader, val_dataloader, test_dataloader, m
+    # )
+    #
+    # if 1 < args.multi_hot_size and m.collect_freqs_stats:
+    #     m.save_freqs_stats()
 
 if __name__ == "__main__":
     main(sys.argv[1:])
