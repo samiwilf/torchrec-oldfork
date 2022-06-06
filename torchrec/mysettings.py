@@ -118,7 +118,7 @@ if SETTING == 5:
     INT_FEATURE_COUNT = 13
     #CAT_FEATURE_COUNT = 26
     DAYS = 24
-    BATCH_SIZE = 256 #2048
+    BATCH_SIZE = 16384
     EMB_DIM = 128
 
     #mlperf

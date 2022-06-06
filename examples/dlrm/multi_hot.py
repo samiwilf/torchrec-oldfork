@@ -114,9 +114,9 @@ class multihot_uniform():
 
     def save_freqs_stats(self, rank):
         pre_dict = {str(k) : e for k, e in enumerate(self.freqs_pre_hash)}
-        np.save("stats_pre_hash_pareto.npy", pre_dict)
+        np.save(f"stats_pre_hash_{rank}_pareto.npy", pre_dict)
         post_dict = {str(k) : e for k, e in enumerate(self.freqs_post_hash)}
-        np.save("stats_post_hash_pareto.npy", post_dict)
+        np.save(f"stats_post_hash_{rank}_pareto.npy", post_dict)
 
     def __make_indices_offsets_cache(self, multi_hot_size, ln_emb, cache_vectors_count):
         # cache = np.zeros((len(ln_emb), cache_vectors_count, multi_hot_size))
