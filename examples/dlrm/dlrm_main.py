@@ -305,8 +305,6 @@ def _evaluate(
     next_iterator: Iterator[Batch],
     stage: str,
     writer: SummaryWriter,
-    log_iter: int = None,
-
 ) -> None:
     """
     Evaluate model. Computes and prints metrics including AUROC and Accuracy. Helper
@@ -327,8 +325,7 @@ def _evaluate(
     Returns:
         None.
     """
-    if log_iter == None:
-        return
+    _evaluate.log_iter += 1
     model = train_pipeline._model
     if MODEL_EVAL:
         model.eval()
@@ -360,13 +357,18 @@ def _evaluate(
 
 
     # Infinite iterator instead of while-loop to leverage tqdm progress bar.
-    for _ in tqdm(iter(int, 1), desc=f"Evaluating {stage} set"):
+    #for _ in tqdm(iter(int, 1), desc=f"Evaluating {stage} set"):
+    pbar = tqdm(iter(int, 1), desc=f"Evaluating {stage} set")
+    while True:
         try:
             _loss, logits, labels = train_pipeline.progress(combined_iterator)
             nn_output = torch.sigmoid(logits)
             labels = labels.int()
             auroc(nn_output, labels)
             accuracy(nn_output, labels)
+
+            if dist.get_rank() == 0:
+                pbar.update(1)
 
             if args.mlperf_logging:
                 Z_test = nn_output
@@ -383,8 +385,8 @@ def _evaluate(
     if dist.get_rank() == 0:
         print(f"AUROC over {stage} set: {auroc_result}.")
         print(f"Accuracy over {stage} set: {accuracy_result}.")
-        writer.add_scalar(f"Acc over {stage}", accuracy_result, log_iter)
-        writer.add_scalar(f"AUROC over {stage}", auroc_result, log_iter)
+        writer.add_scalar(f"Acc over {stage}", accuracy_result, _evaluate.log_iter)
+        writer.add_scalar(f"AUROC over {stage}", auroc_result, _evaluate.log_iter)
 
     if args.mlperf_logging:
         with record_function("DLRM mlperf sklearn metrics compute"):
@@ -414,11 +416,11 @@ def _evaluate(
             writer.add_scalar(
                 "mlperf-metrics-test/" + metric_name,
                 validation_results[metric_name],
-                log_iter,
+                _evaluate.log_iter,
             )
 
     model.train(True)
-
+_evaluate.log_iter = 0
 
 def _train(
     args: argparse.Namespace,
@@ -429,7 +431,7 @@ def _train(
     epoch: int,
     writer: SummaryWriter,
     multihot_hash: multihot_uniform = None,
-) -> int:
+) -> None:
     """
     Train model for 1 epoch. Helper function for train_val_test.
 
@@ -470,10 +472,14 @@ def _train(
 
     # Infinite iterator instead of while-loop to leverage tqdm progress bar.
     it = 0
-    for _ in tqdm(iter(int, 1), desc=f"Epoch {epoch}"):
+    #for _ in tqdm(iter(int, 1), desc=f"Epoch {epoch}"):
+    pbar = tqdm(iter(int, 1), desc=f"Epoch {epoch}")
+    while True:
         try:
             _loss, logits, labels = train_pipeline.progress(combined_iterator)
-            writer.add_scalar("Train/Loss", _loss, it)
+            if dist.get_rank() == 0:
+                writer.add_scalar("Train/Loss", _loss, _train.it_across_epochs)
+                pbar.update(1)
             if (
                 args.validation_freq_within_epoch
                 and it > 0
@@ -488,16 +494,16 @@ def _train(
                     iterator,
                     "val",
                     writer,
-                    it
                 )
                 if multihot_hash is not None and multihot_hash.collect_freqs_stats:
                     multihot_hash.collect_freqs_stats_temp_disable = False
             it += 1
+            _train.it_across_epochs += 1
         except StopIteration:
             break
     if multihot_hash is not None and multihot_hash.collect_freqs_stats:
         multihot_hash.collect_freqs_stats_temp_disable = False
-    return it
+_train.it_across_epochs = 0
 
 def train_val_test(
     args: argparse.Namespace,
@@ -592,7 +598,7 @@ def train_val_test(
             )
 
         val_iterator = iter(val_dataloader)
-        it = _train(
+        _train(
             args, train_pipeline, train_iterator, val_iterator, val_dataloader, epoch, writer, multihot_hash
         )
         train_iterator = iter(train_dataloader)
@@ -608,7 +614,7 @@ def train_val_test(
                     mlperf_logger.constants.EPOCH_NUM: epoch+1
                 },
             )
-        _evaluate(args, train_pipeline, val_iterator, val_next_iterator, "val", writer, it)
+        _evaluate(args, train_pipeline, val_iterator, val_next_iterator, "val", writer)
 
         if args.mlperf_logging:
             mlperf_logger.barrier()
@@ -619,7 +625,7 @@ def train_val_test(
                 },
             )
 
-    _evaluate(args, train_pipeline, test_iterator, iter(test_dataloader), "test", writer, it)
+    _evaluate(args, train_pipeline, test_iterator, iter(test_dataloader), "test", writer)
 
 
 def main(argv: List[str]) -> None:

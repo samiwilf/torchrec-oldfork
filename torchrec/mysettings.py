@@ -2,14 +2,33 @@
 # torchx run -s local_cwd dist.ddp -j 1x8 --script dlrm_main.py
 # torchx run -s local_cwd  aws_component.py:run_dlrm_main --num_trainers=8
 
+import os
+rank = int(os.environ["LOCAL_RANK"])
+
+import git
+repo = git.Repo(search_parent_directories=True)
+sha = repo.head.object.hexsha
+
 import pathlib
 
 LOG_PATH = "/home/ubuntu/repos/torchrec-oldfork/examples/dlrm/"
 SETTING = 5
 
-print('*'.center(40, '*'))
-print(f"  RUNNING SETTING {SETTING}  ".center(40, '*'))
-print('*'.center(40, '*'))
+if rank == 0:
+    print("\n")
+    print('*'.center(80, '*'))
+    print(f"  RUNNING SETTING {SETTING}  ".center(80, '*'))
+    #print('*'.center(80, '*'))
+    print(f"  GIT HASH {sha}  ".center(80, '*'))
+    print('*'.center(80, '*'))
+    print("\n")
+    for diff_item in repo.index.diff(None):
+        # print(diff_item.new_file)
+        if diff_item.b_path[-3:] == ".py":
+            #print(diff_item.b_path)
+            diff = repo.git.diff(repo.head.commit.tree, diff_item.b_path)
+            print(diff)
+    print("\n")
 
 DENSE_LOG_FILE = pathlib.Path(LOG_PATH + "s" + str(SETTING) + "_DENSE.txt")
 SPARSE_LOG_FILE = pathlib.Path(LOG_PATH + "s" + str(SETTING) + "_SPARSE.txt")
@@ -153,10 +172,11 @@ COMMON_ARGV = [
     '--validation_freq_within_epoch','100000',
     #'--mlperf_logging',
     '--multi_hot_size','1',
-    '--tensor_board_filename', '1-hot-SGD-LR1-TB-data-table-wise-batched-fused-256-batch-size-' + str(int(time.time())),
+    #'--tensor_board_filename', '1-hot-SGD-LR1-TB-data-table-wise-batched-fused-256-batch-size-' + str(int(time.time())),
     #'--tensor_board_filename', '20-hot-attention-SGD-LR1-Uniform-TB-data-' + str(int(time.time())),
     # '--interaction_branch1_layer_sizes', '128,512,512,4096',
     # '--interaction_branch2_layer_sizes', '512,512,4096',
+    '--tensor_board_filename', 'dummy_tensorbaord_test',
 ]
 # COMMON_ARGV += ['--limit_train_batches','100', '--limit_val_batches', '100', '--limit_test_batches', '100']
 if SETTING != 5 and SETTING != 4:
