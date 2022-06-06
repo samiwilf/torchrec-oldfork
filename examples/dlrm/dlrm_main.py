@@ -788,7 +788,7 @@ def main(argv: List[str]) -> None:
         if k % 100 == 0:
             print(k)
     if 1 < args.multi_hot_size and m.collect_freqs_stats:
-        m.save_freqs_stats()
+        m.save_freqs_stats(dist.get_rank())
 
     # train_val_test(
     #     args, train_pipeline, train_dataloader, val_dataloader, test_dataloader, m

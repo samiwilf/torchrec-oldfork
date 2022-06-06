@@ -112,7 +112,7 @@ class multihot_uniform():
             self.freqs_pre_hash.append(np.zeros((row_count)))
             self.freqs_post_hash.append(np.zeros((row_count)))
 
-    def save_freqs_stats(self):
+    def save_freqs_stats(self, rank):
         pre_dict = {str(k) : e for k, e in enumerate(self.freqs_pre_hash)}
         np.save("stats_pre_hash_pareto.npy", pre_dict)
         post_dict = {str(k) : e for k, e in enumerate(self.freqs_post_hash)}
