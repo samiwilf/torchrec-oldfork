@@ -114,21 +114,21 @@ class multihot_uniform():
 
     def save_freqs_stats(self, rank):
         pre_dict = {str(k) : e for k, e in enumerate(self.freqs_pre_hash)}
-        np.save("stats_pre_hash_pareto.npy", pre_dict)
+        np.save("stats_pre_hash.npy", pre_dict)
         post_dict = {str(k) : e for k, e in enumerate(self.freqs_post_hash)}
-        np.save("stats_post_hash_pareto.npy", post_dict)
+        np.save("stats_post_hash.npy", post_dict)
 
     def __make_indices_offsets_cache(self, multi_hot_size, ln_emb, cache_vectors_count):
-        # cache = np.zeros((len(ln_emb), cache_vectors_count, multi_hot_size))
+        dist_type = 'uniform'
         cache = [ np.zeros((rows_count, multi_hot_size)) for _, rows_count in enumerate(ln_emb) ]
         for k, e in enumerate(ln_emb):
             np.random.seed(k) # The seed is necessary for all ranks produce the same lookup values.
-            #cache[k,:,:] = np.random.randint(0, e, size=(cache_vectors_count, multi_hot_size))
-            cache[k][:,1:] = np.random.pareto(a=0.25, size=(e, multi_hot_size-1)).astype(np.int32) % e
-        # cache axes are [table, batch, offset]
+            if dist_type == "pareto":
+                cache[k][:,1:] = np.random.pareto(a=0.25, size=(e, multi_hot_size-1)).astype(np.int32) % e
+            else:
+                cache[k][:,1:] = np.random.randint(0, e, size=(e, multi_hot_size-1))
         cache = [ torch.from_numpy(table_cache).int() for table_cache in cache ]
         return cache
-
     def __make_offsets_cache(self, multi_hot_size, multi_hot_min_table_size, ln_emb, batch_size):
         lS_o = torch.ones((len(ln_emb) * self.batch_size), dtype=torch.int32)
         for cf, table_length in enumerate(ln_emb):
