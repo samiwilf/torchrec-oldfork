@@ -471,6 +471,31 @@ class DLRM(nn.Module):
         """
         embedded_dense = self.dense_arch(dense_features)
         embedded_sparse = self.sparse_arch(sparse_features)
+
+        V = embedded_sparse
+        v_shape = V.shape
+
+        #V = V.view(-1)
+        V = V.clone()
+        V0 = V[:,:,0::2]#.clone()
+        V1 = V[:,:,1::2]#.clone()
+
+        V0_n = nn.functional.softmax(V0, dim = -1)
+        V1_n = nn.functional.softmax(V1, dim = -1)
+        V0_n = nn.functional.dropout(V0_n, p=0.50, training=True, inplace=False)
+        V1_n = nn.functional.dropout(V1_n, p=0.50, training=True, inplace=False)
+
+        a = 1 + torch.sum(V0_n * V1_n, dim=-1)
+        b = 1 + torch.sum(V0_n + V1_n, dim=-1)
+        a = a.clone()
+        b = b.clone()
+        AttentionFactor = b / a #nn.functional.sigmoid(a / (1 + b))
+
+        V *= AttentionFactor.view(v_shape[:-1]).unsqueeze(-1)
+
+        V = V.reshape(v_shape)
+        embedded_sparse = V
+
         concatenated_dense = self.inter_arch(
             dense_features=embedded_dense, sparse_features=embedded_sparse
         )

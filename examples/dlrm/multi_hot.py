@@ -98,7 +98,7 @@ class multihot_uniform():
         self.multi_hot_size = multi_hot_size
         self.batch_size = batch_size
         self.ln_emb = ln_emb
-        self.cache_vectors_count = -100000
+        self.cache_vectors_count = 100000
         self.lS_i_offsets_cache = self.__make_indices_offsets_cache(multi_hot_size, ln_emb, self.cache_vectors_count)
         self.lS_o_cache = self.__make_offsets_cache(multi_hot_size, multi_hot_min_table_size, ln_emb, batch_size)
 
@@ -120,13 +120,15 @@ class multihot_uniform():
 
     def __make_indices_offsets_cache(self, multi_hot_size, ln_emb, cache_vectors_count):
         dist_type = 'uniform'
-        cache = [ np.zeros((rows_count, multi_hot_size)) for _, rows_count in enumerate(ln_emb) ]
+        cache = []
         for k, e in enumerate(ln_emb):
             np.random.seed(k) # The seed is necessary for all ranks produce the same lookup values.
             if dist_type == "pareto":
-                cache[k][:,1:] = np.random.pareto(a=0.25, size=(e, multi_hot_size-1)).astype(np.int32) % e
+                cache.append(np.random.pareto(a=0.25, size=(e, multi_hot_size)).astype(np.int32) % e)
             else:
-                cache[k][:,1:] = np.random.randint(0, e, size=(e, multi_hot_size-1))
+                #cache[k][:,1:] = np.random.randint(0, e, size=(e, multi_hot_size-1))
+                cache.append(np.random.randint(0, e, size=(cache_vectors_count, multi_hot_size)))
+
         cache = [ torch.from_numpy(table_cache).int() for table_cache in cache ]
         return cache
     def __make_offsets_cache(self, multi_hot_size, multi_hot_min_table_size, ln_emb, batch_size):
@@ -147,11 +149,9 @@ class multihot_uniform():
                 if table_length < self.multi_hot_min_table_size:
                     multi_hot_i_l.append(lS_i[cf])
                 else:
-                    keys = lS_i[cf] # % self.cache_vectors_count
+                    keys = lS_i[cf] % self.cache_vectors_count
                     multi_hot_i_offsets = torch.nn.functional.embedding(keys, self.lS_i_offsets_cache[cf])
-                    multi_hot_i_offsets[:,0] = keys
-                    #multi_hot_i = (multi_hot_i_offsets + lS_i[cf].unsqueeze(-1)) % table_length
-                    multi_hot_i = multi_hot_i_offsets
+                    multi_hot_i = (multi_hot_i_offsets + lS_i[cf].unsqueeze(-1)) % table_length
                     multi_hot_i = multi_hot_i.reshape(-1)
                     multi_hot_i_l.append(multi_hot_i)
                     if self.collect_freqs_stats:
