@@ -92,7 +92,7 @@ def _get_in_memory_dataloader(
     dataloader = DataLoader(
         InMemoryBinaryCriteoIterDataPipe(
             *stage_files,  # pyre-ignore[6]
-            batch_size=args.batch_size if stage == 'train' else 16384//8,
+            batch_size=args.batch_size, #if stage == 'train' else 16384//8,
             rank=rank,
             world_size=world_size,
             shuffle_batches=args.shuffle_batches,

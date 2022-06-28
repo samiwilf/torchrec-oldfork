@@ -1,0 +1,18 @@
+Script started on 2022-06-05 05:14:35+00:00 [TERM="xterm-256color" TTY="/dev/pts/1" COLUMNS="156" LINES="11"]
+Node 0 ]0;ubuntu@ip-172-31-47-120: ~/repos/torchrec-oldfork[01;32mubuntu@ip-172-31-47-120[00m:[01;34m~/repos/torchrec-oldfork[00m$ exitscript
+exitscript: command not found
+Node 0 ]0;ubuntu@ip-172-31-47-120: ~/repos/torchrec-oldfork[01;32mubuntu@ip-172-31-47-120[00m:[01;34m~/repos/torchrec-oldfork[00m$ 
+Node 0 ]0;ubuntu@ip-172-31-47-120: ~/repos/torchrec-oldfork[01;32mubuntu@ip-172-31-47-120[00m:[01;34m~/repos/torchrec-oldfork[00m$ man script
+[?1049h[22;0;0t[?1h=SCRIPT(1)                                                             User Commands                                                            SCRIPT(1)[m
+[m
+[1mNAME[0m[m
+       script - make typescript of terminal session[m
+[m
+[1mSYNOPSIS[0m[m
+       [1mscript[0m [options] [[4mfile[24m][m
+[m
+[1mDESCRIPTION[0m[m
+       [1mscript[0m  makes a typescript of everything displayed on your terminal.  It is useful for students who need a hardcopy record of an interactive ses‐[m
+[7m Manual page script(1) line 1 (press h for help or q to quit)[27m[K[K[?1l>[?1049l[23;0;0tNode 0 ]0;ubuntu@ip-172-31-47-120: ~/repos/torchrec-oldfork[01;32mubuntu@ip-172-31-47-120[00m:[01;34m~/repos/torchrec-oldfork[00m$ exit
+
+Script done on 2022-06-05 05:16:56+00:00 [COMMAND_EXIT_CODE="0"]
