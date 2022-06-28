@@ -112,21 +112,22 @@ class multihot_uniform():
             self.freqs_pre_hash.append(np.zeros((row_count)))
             self.freqs_post_hash.append(np.zeros((row_count)))
 
+        #self.dist_type = 'uniform'
+        self.dist_type = 'pareto'
+
     def save_freqs_stats(self, rank):
         pre_dict = {str(k) : e for k, e in enumerate(self.freqs_pre_hash)}
-        np.save("stats_pre_hash.npy", pre_dict)
+        np.save(f"stats_pre_hash_{self.dist_type}.npy", pre_dict)
         post_dict = {str(k) : e for k, e in enumerate(self.freqs_post_hash)}
-        np.save("stats_post_hash.npy", post_dict)
+        np.save(f"stats_post_hash_{self.dist_type}.npy", post_dict)
 
     def __make_indices_offsets_cache(self, multi_hot_size, ln_emb, cache_vectors_count):
-        dist_type = 'uniform'
         cache = []
         for k, e in enumerate(ln_emb):
             np.random.seed(k) # The seed is necessary for all ranks produce the same lookup values.
-            if dist_type == "pareto":
+            if self.dist_type == "pareto":
                 cache.append(np.random.pareto(a=0.25, size=(e, multi_hot_size)).astype(np.int32) % e)
             else:
-                #cache[k][:,1:] = np.random.randint(0, e, size=(e, multi_hot_size-1))
                 cache.append(np.random.randint(0, e, size=(cache_vectors_count, multi_hot_size)))
 
         cache = [ torch.from_numpy(table_cache).int() for table_cache in cache ]
@@ -149,9 +150,14 @@ class multihot_uniform():
                 if table_length < self.multi_hot_min_table_size:
                     multi_hot_i_l.append(lS_i[cf])
                 else:
-                    keys = lS_i[cf] % self.cache_vectors_count
-                    multi_hot_i_offsets = torch.nn.functional.embedding(keys, self.lS_i_offsets_cache[cf])
-                    multi_hot_i = (multi_hot_i_offsets + lS_i[cf].unsqueeze(-1)) % table_length
+                    if self.dist_type == 'uniform':
+                        keys = lS_i[cf] % self.cache_vectors_count
+                        multi_hot_i_offsets = torch.nn.functional.embedding(keys, self.lS_i_offsets_cache[cf])
+                        multi_hot_i = (multi_hot_i_offsets + lS_i[cf].unsqueeze(-1)) % table_length
+                    else:
+                        keys = lS_i[cf]
+                        multi_hot_i = torch.nn.functional.embedding(keys, self.lS_i_offsets_cache[cf])
+                        multi_hot_i[:,0] = keys
                     multi_hot_i = multi_hot_i.reshape(-1)
                     multi_hot_i_l.append(multi_hot_i)
                     if self.collect_freqs_stats:
