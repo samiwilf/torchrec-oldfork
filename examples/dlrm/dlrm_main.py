@@ -61,7 +61,7 @@ try:
     # pyre-ignore[21]
     # @manual=//torchrec/github/examples/dlrm/modules:dlrm_train
     from modules.dlrm_train import DLRMTrain
-    from multi_hot import multihot_uniform
+    from multi_hot import Multihot
 except ImportError:
     pass
 
@@ -282,6 +282,14 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
         help="The minimum number of rows an embedding table must have to run multi-hot inputs.",
     )
     parser.add_argument(
+        "--multi_hot_distribution_type",
+        type=str,
+        choices=["uniform", "pareto"],
+        default="uniform",
+        help="Path to a folder containing the binary (npy) files for the Criteo dataset."
+        " When supplied, InMemoryBinaryCriteoIterDataPipe is used.",
+    )
+    parser.add_argument(
         "--interaction_branch1_layer_sizes",
         type=str,
         default="",
@@ -429,7 +437,7 @@ def _train(
     within_epoch_val_dataloader: DataLoader,
     epoch: int,
     writer: SummaryWriter,
-    multihot_hash: multihot_uniform = None,
+    multihot_hash: Multihot = None,
 ) -> None:
     """
     Train model for 1 epoch. Helper function for train_val_test.
@@ -510,7 +518,7 @@ def train_val_test(
     train_dataloader: DataLoader,
     val_dataloader: DataLoader,
     test_dataloader: DataLoader,
-    multihot_hash: multihot_uniform = None,
+    multihot_hash: Multihot = None,
 ) -> None:
     """
     Train/validation/test loop. Contains customized logic to ensure each dataloader's
@@ -776,12 +784,13 @@ def main(argv: List[str]) -> None:
     m = None
     if 1 < args.multi_hot_size:
         #m = multihot(args.multi_hot_size, args.num_embeddings_per_feature, args.batch_size)
-        m = multihot_uniform(
+        m = Multihot(
             args.multi_hot_size,
             args.multi_hot_min_table_size,
             args.num_embeddings_per_feature,
             args.batch_size,
             collect_freqs_stats = args.collect_freqs_stats,
+            type=args.multi_hot_distribution_type,
         )
         train_dataloader = map(m.convert_to_multi_hot, train_dataloader)
         val_dataloader = map(m.convert_to_multi_hot, val_dataloader)

@@ -4,7 +4,7 @@ from torchrec.datasets.utils import Batch
 from torchrec.sparse.jagged_tensor import KeyedJaggedTensor
 
 
-class multihot_uniform():
+class Multihot():
     def __init__(
         self,
         multi_hot_size,
@@ -12,17 +12,38 @@ class multihot_uniform():
         ln_emb,
         batch_size,
         collect_freqs_stats,
+        type: str = "uniform",
     ):
-        #self.dist_type = 'uniform'
-        self.dist_type = 'pareto'
+        if type != "uniform" and type != "pareto":
+            raise ValueError(
+                "Multi-hot distribution type {} is not supported."
+                "Only \"uniform\" and \"pareto\" are supported.".format(type)
+            )
+        #self.dist_type = 'pareto'
+        self.dist_type = type
 
         self.multi_hot_min_table_size = multi_hot_min_table_size
         self.multi_hot_size = multi_hot_size
         self.batch_size = batch_size
         self.ln_emb = ln_emb
-        self.cache_vectors_count = 100000
+        self.cache_vectors_count = 10000
         self.lS_i_offsets_cache = self.__make_indices_offsets_cache(multi_hot_size, ln_emb, self.cache_vectors_count)
         self.lS_o_cache = self.__make_offsets_cache(multi_hot_size, multi_hot_min_table_size, ln_emb, batch_size)
+
+
+
+        weights_l = []
+        for table_length in ln_emb:
+            if table_length < self.multi_hot_min_table_size:
+                weights = torch.ones((batch_size, 1), dtype=torch.float32)
+            else:
+                weights = torch.ones((batch_size, multi_hot_size), dtype=torch.float32)
+                weights[:,1:] *= 0.20 / (multi_hot_size-1)
+                weights[:,0] *= 0.8
+            weights_l.append(weights.reshape(-1))
+        #weights = [ torch.ones((multi_hot_size))*0.20/multi_hot_size for rows_count in ln_emb ]
+        self.weighted_pooling_tensor = torch.concat(weights_l, axis=0)
+
 
 
         # For plotting frequency access
@@ -48,7 +69,7 @@ class multihot_uniform():
                 cache.append(np.random.pareto(a=0.25, size=(e, multi_hot_size)).astype(np.int32) % e)
             else:
                 cache.append(np.random.randint(0, e, size=(cache_vectors_count, multi_hot_size)))
-
+        # cache axes are [table, batch, offset]
         cache = [ torch.from_numpy(table_cache).int() for table_cache in cache ]
         return cache
     def __make_offsets_cache(self, multi_hot_size, multi_hot_min_table_size, ln_emb, batch_size):
@@ -96,6 +117,7 @@ class multihot_uniform():
         new_sparse_features=KeyedJaggedTensor.from_offsets_sync(
             keys=batch.sparse_features._keys,
             values=lS_i,
+            weights=self.weighted_pooling_tensor,
             offsets=lS_o,
         )
         return Batch(
