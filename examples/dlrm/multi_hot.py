@@ -13,6 +13,7 @@ class Multihot():
         batch_size,
         collect_freqs_stats,
         type: str = "uniform",
+        weighted_pooling: bool = False,
     ):
         if type != "uniform" and type != "pareto":
             raise ValueError(
@@ -21,6 +22,7 @@ class Multihot():
             )
         #self.dist_type = 'pareto'
         self.dist_type = type
+        self.weighted_pooling = weighted_pooling
 
         self.multi_hot_min_table_size = multi_hot_min_table_size
         self.multi_hot_size = multi_hot_size
@@ -44,6 +46,8 @@ class Multihot():
         #weights = [ torch.ones((multi_hot_size))*0.20/multi_hot_size for rows_count in ln_emb ]
         self.weighted_pooling_tensor = torch.concat(weights_l, axis=0)
 
+        if weighted_pooling == False:
+            self.weighted_pooling_tensor = None
 
 
         # For plotting frequency access
@@ -113,6 +117,7 @@ class Multihot():
         lS_i = batch.sparse_features._values
         lS_o = batch.sparse_features._offsets
         lS_o, lS_i = self.__make_new_batch(lS_o, lS_i)
+
 
         new_sparse_features=KeyedJaggedTensor.from_offsets_sync(
             keys=batch.sparse_features._keys,

@@ -177,6 +177,7 @@ COMMON_ARGV = [
     #'--tensor_board_filename', '20-hot-attention-SGD-LR1-Uniform-TB-data-' + str(int(time.time())),
     # '--interaction_branch1_layer_sizes', '128,512,512,4096',
     # '--interaction_branch2_layer_sizes', '512,512,4096',
+    '--multi_hot_weighted_pooling',
     '--multi_hot_distribution_type','pareto',
     '--tensor_board_filename', '20-hot-SGD-LR1-Pareto-2048-batch-TB-data-' + str(int(time.time())),
 ]

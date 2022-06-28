@@ -290,6 +290,11 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
         " When supplied, InMemoryBinaryCriteoIterDataPipe is used.",
     )
     parser.add_argument(
+        "--multi_hot_weighted_pooling",
+        action="store_true",
+        help="Shuffle each batch during training.",
+    )
+    parser.add_argument(
         "--interaction_branch1_layer_sizes",
         type=str,
         default="",
@@ -301,7 +306,7 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
         default="",
         help="Comma separated layer sizes for interaction branch2.",
     )
-    parser.set_defaults(pin_memory=None)
+    parser.set_defaults(pin_memory=None, multi_hot_weighted_pooling=False, mlperf_logging=False, adagrad=False)
     return parser.parse_args(argv)
 
 
@@ -791,6 +796,7 @@ def main(argv: List[str]) -> None:
             args.batch_size,
             collect_freqs_stats = args.collect_freqs_stats,
             type=args.multi_hot_distribution_type,
+            weighted_pooling=args.multi_hot_weighted_pooling,
         )
         train_dataloader = map(m.convert_to_multi_hot, train_dataloader)
         val_dataloader = map(m.convert_to_multi_hot, val_dataloader)
