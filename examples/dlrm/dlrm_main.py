@@ -61,7 +61,6 @@ try:
     # pyre-ignore[21]
     # @manual=//torchrec/github/examples/dlrm/modules:dlrm_train
     from modules.dlrm_train import DLRMTrain
-    from multi_hot import multihot
     from multi_hot import multihot_uniform
 except ImportError:
     pass
