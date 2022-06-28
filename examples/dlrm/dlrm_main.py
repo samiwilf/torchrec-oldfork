@@ -61,7 +61,7 @@ try:
     # pyre-ignore[21]
     # @manual=//torchrec/github/examples/dlrm/modules:dlrm_train
     from modules.dlrm_train import DLRMTrain
-    from multi_hot import Multihot
+    from multi_hot import Multihot, RestartableMap
 except ImportError:
     pass
 
@@ -798,9 +798,9 @@ def main(argv: List[str]) -> None:
             type=args.multi_hot_distribution_type,
             weighted_pooling=args.multi_hot_weighted_pooling,
         )
-        train_dataloader = map(m.convert_to_multi_hot, train_dataloader)
-        val_dataloader = map(m.convert_to_multi_hot, val_dataloader)
-        test_dataloader = map(m.convert_to_multi_hot, test_dataloader)
+        train_dataloader = RestartableMap(m.convert_to_multi_hot, train_dataloader)
+        val_dataloader = RestartableMap(m.convert_to_multi_hot, val_dataloader)
+        test_dataloader = RestartableMap(m.convert_to_multi_hot, test_dataloader)
 
     train_val_test(
         args, train_pipeline, train_dataloader, val_dataloader, test_dataloader, m

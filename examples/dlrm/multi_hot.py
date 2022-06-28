@@ -2,8 +2,14 @@ import torch
 import numpy as np
 from torchrec.datasets.utils import Batch
 from torchrec.sparse.jagged_tensor import KeyedJaggedTensor
+class RestartableMap:
+    def __init__(self, f, source):
+        self.source = source
+        self.func = f
 
-
+    def __iter__(self):
+        for x in self.source:
+            yield self.func(x)
 class Multihot():
     def __init__(
         self,
