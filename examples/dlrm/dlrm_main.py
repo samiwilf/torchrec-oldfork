@@ -649,7 +649,11 @@ def main(argv: List[str]) -> None:
 
     rank = int(os.environ["LOCAL_RANK"])
     if rank == 0:
-        print(argv)
+        for v in argv:
+            if v.startswith("--"):
+                print()
+            print(v, end=" ")
+        print()
 
     if torch.cuda.is_available():
         device: torch.device = torch.device(f"cuda:{rank}")
